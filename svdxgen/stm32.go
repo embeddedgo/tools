@@ -19,6 +19,8 @@ func stm32tweaks(gs []*Group) {
 		}
 		for _, p := range g.Periphs {
 			switch p.Name {
+			case "dma":
+				stm32dma(p)
 			case "exti":
 				stm32exti(p)
 			case "flash":
@@ -162,20 +164,70 @@ func stm32flash(p *Periph) {
 	}
 }
 
+func stm32dma(p *Periph) {
+	var st, ch *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "LISR" || r.Name == "LIFCR":
+			r.Name = r.Name[1:]
+			r.Descr = strings.TrimPrefix(r.Descr, "low")
+			r.Len = 2
+		case r.Name == "HISR" || r.Name == "HIFCR":
+			p.Regs[i] = nil
+
+		case r.Name == "S0CR":
+			cr := *r
+			cr.Name = "CR"
+			st = r
+			st.Name = "S"
+			st.Len = 1
+			st.Descr = "stream configuration and controll registers"
+			st.SubRegs = append(st.SubRegs, &cr)
+		case strings.HasPrefix(r.Name, "S0"):
+			r.Name = r.Name[2:]
+			st.SubRegs = append(st.SubRegs, r)
+			p.Regs[i] = nil
+		case len(r.Name) > 2 && r.Name[0] == 'S' && '0' <= r.Name[1] && r.Name[1] <= '9':
+			if strings.HasSuffix(r.Name, "NDTR") {
+				st.Len++
+			}
+			p.Regs[i] = nil
+
+		case r.Name == "CCR1":
+			cr := *r
+			cr.Name = "CR"
+			ch = r
+			ch.Name = "C"
+			ch.Len = 1
+			ch.Descr = "channel configuration and controll registers"
+			ch.SubRegs = append(ch.SubRegs, &cr)
+		case len(r.Name) > 2 && r.Name[0] == 'C' && r.Name[len(r.Name)-1] == '1':
+			r.Name = r.Name[1 : len(r.Name)-1]
+			ch.SubRegs = append(ch.SubRegs, r)
+			p.Regs[i] = nil
+		case len(r.Name) > 2 && r.Name[0] == 'C' && '0' <= r.Name[len(r.Name)-1] && r.Name[len(r.Name)-1] <= '9':
+			if strings.HasPrefix(r.Name, "CCR") {
+				ch.Len++
+			}
+			p.Regs[i] = nil
+		}
+	}
+}
+
 func stm32fmc(p *Periph) {
 	var bct, bwtr *Reg
 	for i, r := range p.Regs {
 		switch {
 		case r.Name == "BCR1":
-			bcr := *r
-			bcr.Name = "BCR"
+			cr := *r
+			cr.Name = "CR"
 			bct = r
 			bct.Name = "BCT"
 			bct.Len = 1
-			bct.Descr = "chip-select control/timing register"
-			bct.SubRegs = append(bct.SubRegs, &bcr)
+			bct.Descr = "chip-select control and timing registers"
+			bct.SubRegs = append(bct.SubRegs, &cr)
 		case r.Name == "BTR1":
-			r.Name = "BTR"
+			r.Name = "TR"
 			bct.SubRegs = append(bct.SubRegs, r)
 			p.Regs[i] = nil
 		case strings.HasPrefix(r.Name, "BCR"):
