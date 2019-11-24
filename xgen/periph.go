@@ -198,12 +198,12 @@ type {{$bits}} {{$uint}}
 
 type {{$reg}} struct { {{$mu}} }
 
-func (r *{{$reg}}) Bits(mask {{$bits}}) {{$bits}}  { return {{$bits}}({{$ru}}.Bits({{$uint}}(mask))) }
-func (r *{{$reg}}) StoreBits(mask, b {{$bits}})    { {{$ru}}.StoreBits({{$uint}}(mask), {{$uint}}(b)) }
-func (r *{{$reg}}) SetBits(mask {{$bits}})         { {{$ru}}.SetBits({{$uint}}(mask)) }
-func (r *{{$reg}}) ClearBits(mask {{$bits}})       { {{$ru}}.ClearBits({{$uint}}(mask)) }
-func (r *{{$reg}}) Load() {{$bits}}                { return {{$bits}}({{$ru}}.Load()) }
-func (r *{{$reg}}) Store(b {{$bits}})              { {{$ru}}.Store({{$uint}}(b)) }
+func (r *{{$reg}}) LoadBits(mask {{$bits}}) {{$bits}} { return {{$bits}}({{$ru}}.LoadBits({{$uint}}(mask))) }
+func (r *{{$reg}}) StoreBits(mask, b {{$bits}})       { {{$ru}}.StoreBits({{$uint}}(mask), {{$uint}}(b)) }
+func (r *{{$reg}}) SetBits(mask {{$bits}})            { {{$ru}}.SetBits({{$uint}}(mask)) }
+func (r *{{$reg}}) ClearBits(mask {{$bits}})          { {{$ru}}.ClearBits({{$uint}}(mask)) }
+func (r *{{$reg}}) Load() {{$bits}}                   { return {{$bits}}({{$ru}}.Load()) }
+func (r *{{$reg}}) Store(b {{$bits}})                 { {{$ru}}.Store({{$uint}}(b)) }
 
 type {{$rm}} struct { {{$mum}} }
 
