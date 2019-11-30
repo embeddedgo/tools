@@ -315,10 +315,15 @@ func savePeriphs(ctx *ctx) {
 	case strings.HasPrefix(ctx.mcu, "nrf5"):
 		nrf5tweaks(gsli)
 	}
-
 	saveIRQs(ctx)
+
 	for _, g := range gsli {
+		periphs := make([]*Periph, 0, len(g.Periphs))
 		for _, p := range g.Periphs {
+			if len(p.Insts) == 0 {
+				continue
+			}
+			periphs = append(periphs, p)
 			sort.Slice(
 				p.Insts,
 				func(i, j int) bool {
@@ -326,6 +331,7 @@ func savePeriphs(ctx *ctx) {
 				},
 			)
 		}
+		g.Periphs = periphs
 		g.Save(ctx)
 	}
 }

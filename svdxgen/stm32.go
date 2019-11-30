@@ -16,6 +16,8 @@ func stm32tweaks(gs []*Group) {
 		switch g.Name {
 		case "gpio":
 			stm32gpio(g)
+		case "spi":
+			stm32spi(g)
 		}
 		for _, p := range g.Periphs {
 			switch p.Name {
@@ -88,6 +90,8 @@ gloop:
 			switch iname {
 			case "ADC12":
 				inames = []string{"ADC1", "ADC2"}
+			case "SPI1":
+				inames = append(inames, "I2S2ext", "I2S3ext")
 			}
 			for _, iname = range inames {
 				if inst := ctx.instmap[iname]; inst != nil {
@@ -146,19 +150,24 @@ func stm32gpio(g *Group) {
 			}
 		}
 	}
-
 }
 
-func stm32exti(p *Periph) {
-	for _, r := range p.Regs {
-		r.Bits = nil
+func stm32spi(g *Group) {
+	spi := g.Periphs[0]
+	if len(g.Periphs) > 1 {
+		spi.Name = "spi"
+		spi.OrigName = "SPI"
+		for _, p := range g.Periphs[1:] {
+			spi.Insts = append(spi.Insts, p.Insts...)
+			p.Insts = nil
+			if len(spi.Regs) < len(p.Regs) {
+				spi.Regs = p.Regs
+			}
+		}
 	}
-}
-
-func stm32flash(p *Periph) {
-	for _, r := range p.Regs {
-		switch r.Name {
-		case "PDKEYR", "KEYR", "OPTKEYR":
+	for _, r := range spi.Regs {
+		switch {
+		case r.Name == "DR":
 			r.Bits = nil
 		}
 	}
@@ -210,6 +219,21 @@ func stm32dma(p *Periph) {
 				ch.Len++
 			}
 			p.Regs[i] = nil
+		}
+	}
+}
+
+func stm32exti(p *Periph) {
+	for _, r := range p.Regs {
+		r.Bits = nil
+	}
+}
+
+func stm32flash(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "PDKEYR", "KEYR", "OPTKEYR":
+			r.Bits = nil
 		}
 	}
 }
