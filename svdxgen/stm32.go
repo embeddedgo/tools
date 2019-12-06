@@ -221,6 +221,15 @@ func stm32dma(p *Periph) {
 			p.Regs[i] = nil
 		}
 	}
+	if ch != nil {
+		if padn := 5 - len(ch.SubRegs); padn > 0 {
+			pad := &Reg{Name: "_"}
+			if padn > 1 {
+				pad.Len = padn
+			}
+			ch.SubRegs = append(ch.SubRegs, pad)
+		}
+	}
 }
 
 func stm32exti(p *Periph) {

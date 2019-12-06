@@ -27,7 +27,7 @@ type Reg struct {
 	Offset  uint64
 	BitSiz  uint
 	Name    string
-	Len     uint
+	Len     int
 	Descr   string
 	Bits    []*BitField
 	SubRegs []*Reg
@@ -110,6 +110,9 @@ func (p *Periph) Save(ctx *ctx) {
 			subregs := r.SubRegs[0].Name
 			for _, sr := range r.SubRegs[1:] {
 				subregs += "," + sr.Name
+				if sr.Len != 0 {
+					subregs += fmt.Sprintf("[%d]", sr.Len)
+				}
 			}
 			name += "{" + subregs + "}"
 		}
@@ -362,7 +365,7 @@ func handleRegs(p *Periph, offset uint64, width uint, srs []*svd.Register) {
 				warn("dimIncrement does not match register width")
 			} else {
 				r.Name = r.Name[:len(r.Name)-4]
-				r.Len = uint(sr.Dim)
+				r.Len = int(sr.Dim)
 			}
 		}
 		handleFields(r, sr.Fields)

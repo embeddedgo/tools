@@ -61,7 +61,7 @@ loop:
 		}
 		length := 0
 		if name[len(name)-1] == ']' {
-			n := strings.IndexByte(name, '[')
+			n := strings.LastIndexByte(name, '[')
 			if n <= 0 {
 				fdie(f, "bad register name: %s", name)
 			}
