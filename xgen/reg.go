@@ -21,6 +21,21 @@ type reg struct {
 	BitRegs []*reg
 }
 
+func regNameLen(f, name string) (string, int) {
+	if name[len(name)-1] == ']' {
+		n := strings.LastIndexByte(name, '[')
+		if n <= 0 {
+			fdie(f, "bad register name: %s", name)
+		}
+		l, err := strconv.ParseUint(name[n+1:len(name)-1], 0, 0)
+		if err != nil {
+			fdie(f, "bad array length in %s", name)
+		}
+		return name[:n], int(l)
+	}
+	return name, 0
+}
+
 func registers(f string, lines []string, decls []ast.Decl) ([]*reg, []string) {
 	var (
 		regs    []*reg
@@ -59,19 +74,7 @@ loop:
 		default:
 			fdie(f, "bad register size %s: not 8, 16, 32", sizstr)
 		}
-		length := 0
-		if name[len(name)-1] == ']' {
-			n := strings.LastIndexByte(name, '[')
-			if n <= 0 {
-				fdie(f, "bad register name: %s", name)
-			}
-			l, err := strconv.ParseUint(name[n+1:len(name)-1], 0, 0)
-			if err != nil {
-				fdie(f, "bad array length in %s", name)
-			}
-			name = name[:n]
-			length = int(l)
-		}
+		name, length := regNameLen(f, name)
 		var subregs []*reg
 		if name[len(name)-1] == '}' {
 			n := strings.IndexByte(name, '{')
@@ -79,9 +82,12 @@ loop:
 				fdie(f, "bad register name: %s", name)
 			}
 			for _, sname := range strings.Split(name[n+1:len(name)-1], ",") {
-				subregs = append(
-					subregs, &reg{Name: sname, BitSiz: size * 8, Len: 1},
-				)
+				sname, slen := regNameLen(f, sname)
+				if sname == "_" {
+					sname = ""
+				}
+				sr := &reg{Name: sname, BitSiz: size * 8, Len: slen}
+				subregs = append(subregs, sr)
 			}
 			name = name[:n]
 		}

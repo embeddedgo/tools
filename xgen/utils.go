@@ -44,6 +44,7 @@ func save(fpath string, tpl *template.Template, ctx interface{}) {
 	checkErr(tpl.Execute(buf, ctx))
 	src, err := format.Source(buf.Bytes())
 	checkErr(err)
+	//src := buf.Bytes()
 	dir := filepath.Dir(fpath)
 	base := filepath.Base(fpath)
 	f, err := os.Create(filepath.Join(dir, "x"+base))
