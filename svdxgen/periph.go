@@ -262,8 +262,15 @@ func savePeriphs(ctx *ctx) {
 				if len(sc.Clusters) > 0 {
 					warn("cluster in cluster not supported:", sp.Name, sc.Name)
 				}
-				handleRegs(p, uint64(sc.AddressOffset), width, sc.Registers)
+
+				handleRegs(p, sc.Name, uint64(sc.AddressOffset), width, sc.Registers)
 			}
+			sort.Slice(
+				p.Regs,
+				func(i, k int) bool {
+					return p.Regs[i].Offset < p.Regs[k].Offset
+				},
+			)
 		} else {
 			p = g.pmap[sdp.Name]
 		}
@@ -355,7 +362,7 @@ func savePeriphs(ctx *ctx) {
 	}
 }
 
-func handleRegs(p *Periph, offset uint64, width uint, srs []*svd.Register) {
+func handleRegs(p *Periph, cname string, offset uint64, width uint, srs []*svd.Register) {
 	for _, sr := range srs {
 		if sr.DerivedFrom != nil {
 			warn("derived registers not supported:", p.Name, sr.Name)
@@ -365,6 +372,9 @@ func handleRegs(p *Periph, offset uint64, width uint, srs []*svd.Register) {
 			Offset: offset + uint64(sr.AddressOffset),
 			BitSiz: width,
 			Name:   sr.Name,
+		}
+		if cname != "" {
+			r.Name = cname + "_" + r.Name
 		}
 		p.Regs = append(p.Regs, r)
 		if sr.RegisterPropertiesGroup != nil && sr.Size != nil {

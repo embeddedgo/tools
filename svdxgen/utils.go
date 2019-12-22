@@ -126,3 +126,7 @@ func dropDigits(s string) string {
 func fixSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
+
+func isdigit(b byte) bool {
+	return unicode.IsDigit(rune(b))
+}
