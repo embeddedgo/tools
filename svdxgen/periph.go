@@ -15,12 +15,18 @@ import (
 	"github.com/embeddedgo/tools/svd"
 )
 
-type BitField struct {
+type BitFieldValue struct {
 	Name  string
-	Mask  uint64
-	LSL   uint
 	Descr string
-	Val   bool
+	Value uint64
+}
+
+type BitField struct {
+	Name   string
+	Mask   uint64
+	LSL    uint
+	Descr  string
+	Values []*BitFieldValue
 }
 
 type Reg struct {
@@ -34,7 +40,7 @@ type Reg struct {
 }
 
 type IRQ struct {
-	Val    int
+	Value  int
 	Name   string
 	Descr  string
 	Inst   *Instance
@@ -166,28 +172,31 @@ func saveBits(w io.Writer, regs []*Reg) {
 				continue
 			}
 			fmt.Fprintf(
-				w, "\t%s %s = 0x%02X << %d",
-				bf.Name, r.Name, bf.Mask, bf.LSL,
+				w, "\t%s %s = 0x%02X << %d //+ %s\n",
+				bf.Name, r.Name, bf.Mask, bf.LSL, fixSpaces(bf.Descr),
 			)
-			switch {
-			case bf.Descr != "":
-				if bf.Val {
-					fmt.Fprintf(w, " //  %s\n", fixSpaces(bf.Descr))
-				} else {
-					fmt.Fprintf(w, " //+ %s\n", fixSpaces(bf.Descr))
+			for _, bv := range bf.Values {
+				if bv == nil {
+					continue
 				}
-			case !bf.Val:
-				fmt.Fprintln(w, " //+")
-			default:
-				fmt.Fprintln(w)
+				fmt.Fprintf(
+					w, "\t%s %s = 0x%02X << %d",
+					bv.Name, r.Name, bv.Value, bf.LSL,
+				)
+				if bv.Descr != "" {
+					fmt.Fprintf(w, " //  %s\n", fixSpaces(bv.Descr))
+				} else {
+					fmt.Fprintln(w)
+				}
 			}
 		}
 		fmt.Fprintln(w, ")")
 		fmt.Fprintln(w, "\nconst (")
 		for _, bf := range r.Bits {
-			if !bf.Val {
-				fmt.Fprintf(w, "\t%sn = %d\n", bf.Name, bf.LSL)
+			if bf == nil {
+				continue
 			}
+			fmt.Fprintf(w, "\t%sn = %d\n", bf.Name, bf.LSL)
 		}
 		fmt.Fprintln(w, ")")
 	}
@@ -295,6 +304,13 @@ func savePeriphs(ctx *ctx) {
 			continue
 		case 1:
 			g.Periphs[0].Name = g.Name
+		default:
+			sort.Slice(
+				g.Periphs,
+				func(i, k int) bool {
+					return pnameLess(g.Periphs[i].Name, g.Periphs[k].Name)
+				},
+			)
 		}
 		for k, p := range g.Periphs {
 			nodigit := dropDigits(p.Name)
@@ -407,48 +423,38 @@ func handleFields(r *Reg, sfs []*svd.Field) {
 				if sev.Name == nil || sev.Value == nil {
 					continue
 				}
-				v := &BitField{
-					Name: *sev.Name,
-					Mask: uint64(*sev.Value),
-					LSL:  bf.LSL,
-					Val:  true,
+				bv := &BitFieldValue{
+					Name:  *sev.Name,
+					Value: uint64(*sev.Value),
 				}
-				r.Bits = append(r.Bits, v)
+				bf.Values = append(bf.Values, bv)
 				if sev.Description != nil {
-					v.Descr = *sev.Description
+					bv.Descr = *sev.Description
 				}
 			}
 		}
 	}
 	sort.Slice(
 		r.Bits,
-		func(i, k int) bool {
-			bi := r.Bits[i]
-			bk := r.Bits[k]
-			if bi.LSL < bk.LSL {
-				return true
-			}
-			if bi.LSL > bk.LSL {
-				return false
-			}
-			if !bi.Val && bk.Val {
-				return true
-			}
-			if bi.Val && !bk.Val {
-				return false
-			}
-			return bi.Mask < bk.Mask
-		},
+		func(i, k int) bool { return r.Bits[i].LSL < r.Bits[k].LSL },
 	)
+	for _, bf := range r.Bits {
+		sort.Slice(
+			bf.Values,
+			func(i, k int) bool {
+				return bf.Values[i].Value < bf.Values[k].Value
+			},
+		)
+	}
 }
 
 func handleIRQs(ctx *ctx, inst *Instance, sirqs []*svd.Interrupt) {
 	for _, sirq := range sirqs {
-		irq := &IRQ{Val: int(sirq.Value), Name: sirq.Name, Inst: inst}
+		irq := &IRQ{Value: int(sirq.Value), Name: sirq.Name, Inst: inst}
 		if sirq.Description != nil {
 			irq.Descr = *sirq.Description
 		}
-		ctx.irqmap[irq.Val] = append(ctx.irqmap[irq.Val], irq)
+		ctx.irqmap[irq.Value] = append(ctx.irqmap[irq.Value], irq)
 		inst.IRQs = append(inst.IRQs, irq)
 	}
 }
@@ -479,7 +485,7 @@ func saveIRQs(ctx *ctx) {
 			}
 		}
 	}
-	sort.Slice(irqs, func(i, j int) bool { return irqs[i].Val < irqs[j].Val })
+	sort.Slice(irqs, func(i, j int) bool { return irqs[i].Value < irqs[j].Value })
 
 	dir := ctx.push("irq")
 	defer ctx.pop()
@@ -497,7 +503,7 @@ func saveIRQs(ctx *ctx) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "const (")
 	for _, irq := range irqs {
-		fmt.Fprintf(w, "\t%s = %d", irq.Name, irq.Val)
+		fmt.Fprintf(w, "\t%s = %d", irq.Name, irq.Value)
 		if irq.Descr != "" {
 			fmt.Fprintln(w, "//", fixSpaces(irq.Descr))
 		} else {
