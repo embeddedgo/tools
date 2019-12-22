@@ -6,6 +6,7 @@ package main
 
 import (
 	"go/ast"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -104,28 +105,41 @@ func periph(pkg, f, txt string, decls []ast.Decl, constraints []string) {
 			ctx.Import = append(ctx.Import, imports...)
 		}
 	}
-	buses := make(map[string][]string)
+	busmap := make(map[string][]string)
 	for _, inst := range ctx.Instances {
-		buses[inst.Bus] = append(buses[inst.Bus], inst.Addr)
+		busmap[inst.Bus] = append(busmap[inst.Bus], inst.Addr)
 	}
+	type busaddr struct {
+		bus   string
+		addrs []string
+	}
+	buses := make([]busaddr, 0, len(busmap))
+	for bus, addrs := range busmap {
+		if bus == "" {
+			continue
+		}
+		buses = append(buses, busaddr{bus, addrs})
+	}
+	busmap = nil
+	sort.Slice(
+		buses,
+		func(i, k int) bool {
+			return len(buses[i].addrs) > len(buses[k].addrs)
+		},
+	)
 	if len(buses) == 1 {
-		var bus string
-		for bus = range buses {
-		}
-		if bus != "" {
-			ctx.BusCode = "return " + bus
-		}
+		ctx.BusCode = "return " + buses[0].bus
 	} else if len(buses) > 1 {
 		ctx.BusCode = "switch p.BaseAddr() {\n"
 		first := true
-		for bus, as := range buses {
+		for _, ba := range buses {
 			if first {
 				ctx.BusCode += "default:"
 				first = false
 			} else {
-				ctx.BusCode += "case " + strings.Join(as, ",") + ":"
+				ctx.BusCode += "case " + strings.Join(ba.addrs, ",") + ":"
 			}
-			ctx.BusCode += "\treturn " + bus + "\n"
+			ctx.BusCode += "\treturn " + ba.bus + "\n"
 		}
 		ctx.BusCode += "}"
 	}
