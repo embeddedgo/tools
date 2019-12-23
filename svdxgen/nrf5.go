@@ -17,6 +17,8 @@ func nrf5tweaks(gs []*Group) {
 				nrf5ficr(p)
 			case "gpio":
 				nrf5gpio(p)
+			case "nvmc":
+				nrf5nvmc(p)
 			case "uicr":
 				nrf5uicr(p)
 			default:
@@ -126,6 +128,19 @@ func nrf5gpio(p *Periph) {
 						}
 					}
 				}
+			}
+		}
+	}
+}
+
+func nrf5nvmc(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "READY", "READYNEXT", "ERASEALL", "ERASEUICR":
+			r.Bits = nil
+		case "ICACHECNF":
+			for _, b := range r.Bits {
+				b.Values = nil
 			}
 		}
 	}
