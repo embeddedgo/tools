@@ -11,7 +11,7 @@ import (
 func nrf5tweaks(gs []*Group) {
 	for _, g := range gs {
 		for _, p := range g.Periphs {
-			nfr5drop(p)
+			nfr5common(p)
 			switch p.Name {
 			case "ficr":
 				nrf5ficr(p)
@@ -21,6 +21,8 @@ func nrf5tweaks(gs []*Group) {
 				nrf5nvmc(p)
 			case "uicr":
 				nrf5uicr(p)
+			case "uart":
+				nrf5uart(p)
 			default:
 				p.Insts = nil
 			}
@@ -28,14 +30,38 @@ func nrf5tweaks(gs []*Group) {
 	}
 }
 
-func nfr5drop(p *Periph) {
+func nfr5common(p *Periph) {
 	for _, r := range p.Regs {
-		switch {
-		case strings.HasPrefix(r.Name, "TASKS_") || strings.HasPrefix(r.Name, "EVENTS_"):
+		switch r.Name {
+		case "SHORTS":
+			for _, b := range r.Bits {
+				b.Values = nil
+			}
+		case "INTENSET", "INTENCLR":
 			r.Bits = nil
-		case len(r.Bits) == 1:
+		case "ERRORSRC":
+			for _, b := range r.Bits {
+				b.Name = "E" + b.Name
+			}
+		}
+		switch {
+		case strings.HasPrefix(r.Name, "TASKS_"):
+			r.Name = "TASK_" + r.Name[6:]
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "EVENTS_"):
+			r.Name = "EVENT_" + r.Name[7:]
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "PSEL_"):
+			r.Bits = nil
+		}
+		if len(r.Bits) == 1 {
 			if b := r.Bits[0]; b.Mask == 0xFFFFFFFF && len(b.Values) <= 1 {
 				r.Bits = nil
+			}
+		}
+		for _, b := range r.Bits {
+			if b.Mask == 1 {
+				b.Values = nil
 			}
 		}
 	}
@@ -58,7 +84,7 @@ func nrf5ficr(p *Periph) {
 		case "DEVICEADDRTYPE":
 			for _, b := range r.Bits {
 				if b.Name == "DEVICEADDRTYPE" {
-					b.Name = "DEVADDRTYPE"
+					b.Name = "PUBLIC"
 				}
 			}
 		case "PRODTEST":
@@ -142,6 +168,44 @@ func nrf5nvmc(p *Periph) {
 			for _, b := range r.Bits {
 				b.Values = nil
 			}
+		}
+	}
+}
+
+func nrf5uart(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "ERRORSRC":
+			for _, b := range r.Bits {
+				b.Values = nil
+			}
+		case "ENABLE":
+			for _, b := range r.Bits {
+				if b.Name == "ENABLE" {
+					b.Name = "EN"
+				}
+			}
+		case "BAUDRATE":
+			for _, b := range r.Bits {
+				if b.Name == "BAUDRATE" {
+					b.Name = "BR"
+				}
+			}
+		case "CONFIG":
+			for _, b := range r.Bits {
+				if b.Name == "HFC" {
+					for _, v := range b.Values {
+						switch v.Name {
+						case "Disabled":
+							v.Name = "None"
+						case "Enabled":
+							v.Name = "RTSCTS"
+						}
+					}
+				}
+			}
+		case "RXD", "TXD":
+			r.Bits = nil
 		}
 	}
 }
