@@ -19,6 +19,10 @@ func nrf5tweaks(gs []*Group) {
 				nrf5gpio(p)
 			case "nvmc":
 				nrf5nvmc(p)
+			case "rtc":
+				nrf5rtc(p)
+			case "spi":
+				nrf5spi(p)
 			case "uicr":
 				nrf5uicr(p)
 			case "uart":
@@ -37,11 +41,17 @@ func nfr5common(p *Periph) {
 			for _, b := range r.Bits {
 				b.Values = nil
 			}
-		case "INTENSET", "INTENCLR":
+		case "INTENSET", "INTENCLR", "EVTEN", "EVTENSET", "EVTENCLR":
 			r.Bits = nil
 		case "ERRORSRC":
 			for _, b := range r.Bits {
 				b.Name = "E" + b.Name
+			}
+		case "ENABLE":
+			for _, b := range r.Bits {
+				if b.Name == "ENABLE" {
+					b.Name = "EN"
+				}
 			}
 		}
 		switch {
@@ -172,18 +182,29 @@ func nrf5nvmc(p *Periph) {
 	}
 }
 
+func nrf5rtc(p *Periph) {
+	for _, r := range p.Regs {
+		r.Bits = nil
+	}
+}
+
+func nrf5spi(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "RXD", "TXD":
+			r.Bits = nil
+		case "FREQUENCY":
+			r.Bits[0].Name = "FREQ"
+		}
+	}
+}
+
 func nrf5uart(p *Periph) {
 	for _, r := range p.Regs {
 		switch r.Name {
 		case "ERRORSRC":
 			for _, b := range r.Bits {
 				b.Values = nil
-			}
-		case "ENABLE":
-			for _, b := range r.Bits {
-				if b.Name == "ENABLE" {
-					b.Name = "EN"
-				}
 			}
 		case "BAUDRATE":
 			for _, b := range r.Bits {

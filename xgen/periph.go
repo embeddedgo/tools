@@ -175,6 +175,10 @@ type {{$p}} struct {
 	{{end}}
 }
 
+{{range .Instances -}}
+	func {{.Name}}() *{{$p}} { return (*{{$p}})(unsafe.Pointer(uintptr({{.Addr}}))) }
+{{end}}
+
 func (p *{{$p}}) BaseAddr() uintptr {
 	return uintptr(unsafe.Pointer(p))
 }
@@ -183,11 +187,6 @@ func (p *{{$p}}) BaseAddr() uintptr {
 	func (p *{{$p}}) Bus() bus.Bus {
 		{{.BusCode}}
 	}
-{{end}}
-
-
-{{range .Instances -}}
-	func {{.Name}}() *{{$p}} { return (*{{$p}})(unsafe.Pointer(uintptr({{.Addr}}))) }
 {{end}}
 
 {{range .Regs}}
