@@ -25,7 +25,7 @@ func nrf5tweaks(gs []*Group) {
 				nrf5spi(p)
 			case "uicr":
 				nrf5uicr(p)
-			case "uart":
+			case "uart", "uarte":
 				nrf5uart(p)
 			default:
 				p.Insts = nil
@@ -41,7 +41,8 @@ func nfr5common(p *Periph) {
 			for _, b := range r.Bits {
 				b.Values = nil
 			}
-		case "INTENSET", "INTENCLR", "EVTEN", "EVTENSET", "EVTENCLR":
+		case "INTEN", "INTENSET", "INTENCLR", "EVTEN", "EVTENSET",
+			"EVTENCLR":
 			r.Bits = nil
 		case "ERRORSRC":
 			for _, b := range r.Bits {
@@ -202,10 +203,6 @@ func nrf5spi(p *Periph) {
 func nrf5uart(p *Periph) {
 	for _, r := range p.Regs {
 		switch r.Name {
-		case "ERRORSRC":
-			for _, b := range r.Bits {
-				b.Values = nil
-			}
 		case "BAUDRATE":
 			for _, b := range r.Bits {
 				if b.Name == "BAUDRATE" {
@@ -225,7 +222,8 @@ func nrf5uart(p *Periph) {
 					}
 				}
 			}
-		case "RXD", "TXD":
+		case "RXD", "TXD", "RXD_MAXCNT", "RXD_AMOUNT", "TXD_MAXCNT",
+			"TXD_AMOUNT":
 			r.Bits = nil
 		}
 	}
