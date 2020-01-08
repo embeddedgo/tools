@@ -19,6 +19,8 @@ func nrf5tweaks(gs []*Group) {
 				nrf5gpio(p)
 			case "nvmc":
 				nrf5nvmc(p)
+			case "ppi":
+				nrf5ppi(p)
 			case "rtc":
 				nrf5rtc(p)
 			case "spi":
@@ -36,6 +38,8 @@ func nrf5tweaks(gs []*Group) {
 
 func nfr5common(p *Periph) {
 	for _, r := range p.Regs {
+		r.Descr = strings.Replace(r.Descr, "Description cluster: ", "", -1)
+		r.Descr = strings.Replace(r.Descr, "Description collection: ", "", -1)
 		switch r.Name {
 		case "SHORTS":
 			for _, b := range r.Bits {
@@ -179,6 +183,16 @@ func nrf5nvmc(p *Periph) {
 			for _, b := range r.Bits {
 				b.Values = nil
 			}
+		}
+	}
+}
+
+func nrf5ppi(p *Periph) {
+	for _, r := range p.Regs {
+		r.Bits = nil
+		if r.Name == "FORK" && len(r.SubRegs) == 1 {
+			r.Name += "_" + r.SubRegs[0].Name
+			r.SubRegs = nil
 		}
 	}
 }
