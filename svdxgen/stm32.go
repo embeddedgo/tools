@@ -68,6 +68,7 @@ gloop:
 	buses[0] = "Core"
 	fmt.Fprintf(w, "\t%s Bus = iota\n", buses[0])
 	namelen := len(buses[0])
+	var ahbLast, apbLast string
 	for _, r := range rcc.Regs {
 		i := strings.Index(r.Name, "ENR")
 		if i <= 0 {
@@ -79,6 +80,11 @@ gloop:
 		bus := r.Name[:i]
 		if len(r.Name) == i+3 || len(r.Name) == i+4 && r.Name[i+3] == '1' {
 			fmt.Fprintf(w, "\t%s\n", bus)
+			if bus[1] == 'H' {
+				ahbLast = bus
+			} else {
+				apbLast = bus
+			}
 			if len(bus) != namelen {
 				namelen = 0
 			}
@@ -100,6 +106,9 @@ gloop:
 			}
 		}
 	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "\tAHBLast =", ahbLast)
+	fmt.Fprintln(w, "\tAPBLast =", apbLast)
 	fmt.Fprintln(w, ")")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "type Bus uint8")
