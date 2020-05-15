@@ -65,6 +65,8 @@ loop:
 		}
 		var size int
 		switch sizstr {
+		case "64":
+			size = 8
 		case "32":
 			size = 4
 		case "16":
@@ -72,7 +74,7 @@ loop:
 		case "8":
 			size = 1
 		default:
-			fdie(f, "bad register size %s: not 8, 16, 32", sizstr)
+			fdie(f, "bad register size %s: not 8, 16, 32, 64", sizstr)
 		}
 		name, length := regNameLen(f, name)
 		var subregs []*reg
