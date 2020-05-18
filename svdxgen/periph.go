@@ -9,6 +9,7 @@ import (
 	"io"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -335,6 +336,8 @@ func savePeriphs(ctx *ctx) {
 		stm32bus(gsli, ctx)
 	case strings.HasPrefix(ctx.mcu, "nrf5"):
 		nrf5tweaks(gsli)
+	case strings.HasPrefix(ctx.mcu, "k210"):
+		k210tweaks(gsli)
 	}
 	saveIRQs(ctx)
 
@@ -474,7 +477,21 @@ func handleFields(r *Reg, sfs []*svd.Field) {
 			bf.LSL = lsb
 			bf.Mask = 1<<(1+msb-lsb) - 1
 		case sf.BitRangePattern != nil:
-			warn("TODO: support bit-range pattern")
+			br := *sf.BitRangePattern
+			if len(br) >= 5 && br[0] == '[' && br[len(br)-1] == ']' {
+				br = br[1 : len(br)-1]
+				colon := strings.IndexByte(br, ':')
+				if colon > 0 && colon < len(br)-1 {
+					msb, merr := strconv.ParseUint(br[:colon], 10, 6)
+					lsb, lerr := strconv.ParseUint(br[colon+1:], 10, 6)
+					if merr == nil && lerr == nil {
+						bf.LSL = uint(lsb)
+						bf.Mask = 1<<(1+msb-lsb) - 1
+						break
+					}
+				}
+			}
+			warn("bad bit-range pattern:", r.Name, sf.Name)
 			continue
 		default:
 			warn("bit-range not specified:", r.Name, sf.Name)

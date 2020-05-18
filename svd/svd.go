@@ -166,7 +166,7 @@ type Field struct {
 	Description *string `xml:"description"`
 	*BitRangeOffsetWidth
 	*BitRangeLSBMSB
-	BitRangePattern     *string
+	BitRangePattern     *string             `xml:"bitRange"`
 	Access              *string             `xml:"access"`
 	ModifiedWriteValues *string             `xml:"modifiedWriteValues"`
 	WriteConstraint     *WriteConstraint    `xml:"writeConstraint"`
