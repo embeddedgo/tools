@@ -338,6 +338,7 @@ func savePeriphs(ctx *ctx) {
 		nrf5tweaks(gsli)
 	case strings.HasPrefix(ctx.mcu, "k210"):
 		k210tweaks(gsli)
+		k210bus(gsli, ctx)
 	}
 	saveIRQs(ctx)
 

@@ -4,7 +4,11 @@
 
 package main
 
-import "strings"
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
 
 func k210tweaks(gs []*Group) {
 	for _, g := range gs {
@@ -21,6 +25,76 @@ func k210tweaks(gs []*Group) {
 			}
 		}
 	}
+}
+
+func k210bus(gs []*Group, ctx *ctx) {
+	for _, g := range gs {
+		for _, p := range g.Periphs {
+			switch p.Name {
+			case "gpio", "i2s", "i2c", "uart", "fpioa", "timer", "sha":
+				for _, inst := range p.Insts {
+					inst.Bus = "APB0"
+				}
+			case "aes", "wdt", "otp", "rtc":
+				for _, inst := range p.Insts {
+					inst.Bus = "APB1"
+				}
+			case "spi":
+				for _, inst := range p.Insts {
+					switch inst.Name {
+					case "SPI0", "SPI1":
+						inst.Bus = "APB2"
+					case "SPI2":
+						inst.Bus = "APB0"
+					}
+				}
+			}
+		}
+	}
+
+	dir := ctx.push("bus")
+	defer ctx.pop()
+	mkdir(dir)
+	w := create(filepath.Join(dir, ctx.mcu+".go"))
+	defer w.Close()
+	w.donotedit()
+	fmt.Fprintln(w, "// +build", ctx.mcu)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "package bus")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "const (")
+	buses := []string{
+		"Core",
+		"TileLink",
+		"AXI",
+		"AHB",
+		"APB0",
+		"APB1",
+		"APB2",
+	}
+	fmt.Fprintf(w, "\t%s Bus = iota\n", buses[0])
+	for _, bus := range buses[1:] {
+		fmt.Fprintf(w, "\t%s\n", bus)
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "\tAHBLast = AHB")
+	fmt.Fprintln(w, "\tAPBLast = APB2")
+	fmt.Fprintln(w, ")")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "type Bus uint8")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "var str = [%d]string{\n", len(buses))
+	for _, bus := range buses {
+		fmt.Fprintf(w, "\t\"%s\",\n", bus)
+	}
+	fmt.Fprintln(w, "}")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "func (b Bus) String() string { return str[b] }")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "var buses [%d]struct{ clockHz int64 }\n", len(buses))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "func (b Bus) Clock() int64 { return buses[b].clockHz }")
+	fmt.Fprintln(w, "func (b Bus) SetClock(Hz int64) { buses[b].clockHz = Hz }")
 }
 
 func k210common(p *Periph) {
