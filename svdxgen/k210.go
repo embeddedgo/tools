@@ -19,6 +19,7 @@ func k210tweaks(gs []*Group) {
 				k210sysctl(p)
 			case "gpiohs", "gpio":
 				k210gpio(p)
+			case "uart":
 			case "fpioa":
 			default:
 				p.Insts = nil
