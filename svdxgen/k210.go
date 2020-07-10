@@ -19,8 +19,10 @@ func k210tweaks(gs []*Group) {
 				k210sysctl(p)
 			case "gpiohs", "gpio":
 				k210gpio(p)
-			case "uart":
-			case "fpioa":
+			case "uarths":
+				k210uarths(p)
+			case "fpioa", "uart":
+				// nothing
 			default:
 				p.Insts = nil
 			}
@@ -139,5 +141,36 @@ func k210sysctl(p *Periph) {
 func k210gpio(p *Periph) {
 	for _, r := range p.Regs {
 		r.Bits = nil
+	}
+}
+
+func k210uarths(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "TXDATA":
+			for _, b := range r.Bits {
+				switch b.Name {
+				case "DATA":
+					b.Name = "TXD"
+				case "FULL":
+					b.Name = "TXFULL"
+				}
+			}
+		case "RXDATA":
+			for _, b := range r.Bits {
+				switch b.Name {
+				case "DATA":
+					b.Name = "RXD"
+				case "EMPTY":
+					b.Name = "RXEMPTY"
+				}
+			}
+		case "IE", "IP":
+			for _, b := range r.Bits {
+				b.Name += r.Name
+			}
+		case "DIV":
+			r.Bits = nil
+		}
 	}
 }
