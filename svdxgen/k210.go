@@ -21,6 +21,8 @@ func k210tweaks(gs []*Group) {
 				k210gpio(p)
 			case "uarths":
 				k210uarths(p)
+			case "timer":
+				k210timer(p)
 			case "fpioa", "uart":
 				// nothing
 			default:
@@ -171,6 +173,42 @@ func k210uarths(p *Periph) {
 			}
 		case "DIV":
 			r.Bits = nil
+		}
+	}
+}
+
+func k210timer(p *Periph) {
+	var ch *Reg
+	for i, r := range p.Regs {
+		switch {
+		case strings.HasPrefix(r.Name, "CHANNEL%S"):
+			if ch == nil {
+				ch = &Reg{
+					BitSiz: 32,
+					Len:    4,
+					Name:   "CH",
+					Descr:  "Channel status/control registers",
+				}
+				p.Regs[i] = ch
+			} else {
+				p.Regs[i] = nil
+			}
+			r.Name = r.Name[10:]
+			switch r.Name {
+			case "LOAD_COUNT":
+				r.Name = "LOAD"
+			case "CURRENT_VALUE":
+				r.Name = "CURRENT"
+			case "INTR_STAT":
+				r.Name = "INTSTAT"
+			}
+			ch.SubRegs = append(ch.SubRegs, r)
+		case r.Name == "INTR_STAT":
+			r.Name = "INTSTAT_ALL"
+		case r.Name == "EOI":
+			r.Name = "EOI_ALL"
+		case r.Name == "RAW_INTR_STAT":
+			r.Name = "RAW_INTSTAT_ALL"
 		}
 	}
 }
