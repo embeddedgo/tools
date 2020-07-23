@@ -368,25 +368,20 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 	if sc.RegisterPropertiesGroup != nil && sc.Size != nil {
 		width = uint(*sc.Size)
 	}
-	if i := strings.Index(sc.Name, "[%s]"); i >= 0 {
-		if sc.DimIndex != nil {
-			warn("cluster dimIndex not supporetd:", p.Name, sc.Name)
-			return
+	if i := strings.Index(sc.Name, "%s"); i > 0 {
+		if sc.Name[i-1] == '[' {
+			i--
 		}
 		cr := &Reg{
 			Offset: uint64(sc.AddressOffset),
 			BitSiz: width,
-			Name:   sc.Name[:i] + sc.Name[i+4:],
+			Name:   sc.Name[:i],
 			Len:    int(sc.Dim),
 		}
 		offset := uint64(0)
 		for _, sr := range sc.Registers {
 			if sr.DerivedFrom != nil {
 				warn("derived registers not supported:", p.Name, sr.Name)
-				return
-			}
-			if sr.DimIndex != nil {
-				warn("register dimIndex not supporetd:", p.Name, sr.Name)
 				return
 			}
 			if sr.Dim != 0 {
@@ -413,6 +408,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 				cr.Descr += *sr.Description
 			}
 			cr.SubRegs = append(cr.SubRegs, r)
+			handleFields(r, sr.Fields)
 		}
 		p.Regs = append(p.Regs, cr)
 	} else {
@@ -423,10 +419,6 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 		for _, sr := range sc.Registers {
 			if sr.DerivedFrom != nil {
 				warn("derived registers not supported:", p.Name, sr.Name)
-				continue
-			}
-			if sr.DimIndex != nil {
-				warn("register dimIndex not supporetd:", p.Name, sr.Name)
 				continue
 			}
 			r := &Reg{
@@ -441,11 +433,14 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 			if sr.Description != nil {
 				r.Descr = *sr.Description
 			}
-			if i := strings.Index(r.Name, "[%s]"); i >= 0 {
+			if i := strings.Index(r.Name, "%s"); i > 0 {
+				if r.Name[i-1] == '[' {
+					i--
+				}
 				if uint(sr.DimIncrement*8) != r.BitSiz {
 					warn("dimIncrement does not match register width")
 				} else {
-					r.Name = r.Name[:i] + r.Name[i+4:]
+					r.Name = r.Name[:i]
 					r.Len = int(sr.Dim)
 				}
 			}
