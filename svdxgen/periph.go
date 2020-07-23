@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 
 	"github.com/embeddedgo/tools/svd"
 )
@@ -77,7 +78,7 @@ func (p *Periph) Save(ctx *ctx) {
 	fmt.Fprintln(
 		w,
 		"// Package", p.Name, "provides access to the registers of the",
-		p.OrigName, "peripheral.",
+		strings.TrimRightFunc(p.OrigName, unicode.IsDigit), "peripheral.",
 	)
 	fmt.Fprintln(w, "//")
 	fmt.Fprintln(w, "// Instances:")
