@@ -11,7 +11,25 @@ import (
 )
 
 func k210tweaks(gs []*Group) {
+	spis := &Group{Name: "spis"}
+	gs = append(gs, spis)
 	for _, g := range gs {
+		if g.Name == "spi" {
+			var spi0, spi2 *Periph
+			for _, p := range g.Periphs {
+				switch p.Name {
+				case "spi0":
+					spi0 = p
+				case "spi2":
+					spi2 = p
+				}
+			}
+			spi0.Name = "spi"
+			g.Name = "spi"
+			g.Periphs = []*Periph{spi0}
+			spi2.Name = "spis"
+			spis.Periphs = []*Periph{spi2}
+		}
 		for _, p := range g.Periphs {
 			k210common(p)
 			switch p.Name {
@@ -23,6 +41,8 @@ func k210tweaks(gs []*Group) {
 				k210uarths(p)
 			case "timer":
 				k210timer(p)
+			case "spi":
+				k210spi(p)
 			case "fpioa", "uart":
 				// nothing
 			default:
@@ -47,7 +67,7 @@ func k210bus(gs []*Group, ctx *ctx) {
 			case "spi":
 				for _, inst := range p.Insts {
 					switch inst.Name {
-					case "SPI0", "SPI1":
+					case "SPI0", "SPI1", "SPI3":
 						inst.Bus = "APB2"
 					case "SPI2":
 						inst.Bus = "APB0"
@@ -105,6 +125,15 @@ func k210bus(gs []*Group, ctx *ctx) {
 func k210common(p *Periph) {
 	for _, r := range p.Regs {
 		r.Name = strings.ToUpper(r.Name)
+		for _, sr := range r.SubRegs {
+			sr.Name = strings.ToUpper(sr.Name)
+			for _, b := range sr.Bits {
+				b.Name = strings.ToUpper(b.Name)
+				for _, v := range b.Values {
+					v.Name = strings.ToUpper(v.Name)
+				}
+			}
+		}
 		for _, b := range r.Bits {
 			b.Name = strings.ToUpper(b.Name)
 			for _, v := range b.Values {
@@ -178,37 +207,45 @@ func k210uarths(p *Periph) {
 }
 
 func k210timer(p *Periph) {
-	var ch *Reg
-	for i, r := range p.Regs {
-		switch {
-		case strings.HasPrefix(r.Name, "CHANNEL%S"):
-			if ch == nil {
-				ch = &Reg{
-					BitSiz: 32,
-					Len:    4,
-					Name:   "CH",
-					Descr:  "Channel status/control registers",
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "CHANNEL":
+			r.Name = "CH"
+			for _, sr := range r.SubRegs {
+				switch sr.Name {
+				case "LOAD_COUNT":
+					sr.Name = "LOAD"
+				case "CURRENT_VALUE":
+					sr.Name = "CURRENT"
+				case "INTR_STAT":
+					sr.Name = "INTSTAT"
 				}
-				p.Regs[i] = ch
-			} else {
-				p.Regs[i] = nil
 			}
-			r.Name = r.Name[10:]
-			switch r.Name {
-			case "LOAD_COUNT":
-				r.Name = "LOAD"
-			case "CURRENT_VALUE":
-				r.Name = "CURRENT"
-			case "INTR_STAT":
-				r.Name = "INTSTAT"
-			}
-			ch.SubRegs = append(ch.SubRegs, r)
-		case r.Name == "INTR_STAT":
+		case "INTR_STAT":
 			r.Name = "INTSTAT_ALL"
-		case r.Name == "EOI":
+		case "EOI":
 			r.Name = "EOI_ALL"
-		case r.Name == "RAW_INTR_STAT":
+		case "RAW_INTR_STAT":
 			r.Name = "RAW_INTSTAT_ALL"
+		}
+	}
+}
+
+func k210spi(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "CTRLR0":
+			for _, b := range r.Bits {
+				if b.Name == "FRAME_FORMAT" {
+					for _, v := range b.Values {
+						if v.Name == "STANDARD" {
+							v.Name = "SINGLE"
+						}
+					}
+				}
+			}
+		case "RISR":
+			r.Name = "RAW_ISR"
 		}
 	}
 }
