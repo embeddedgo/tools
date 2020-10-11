@@ -31,6 +31,8 @@ func stm32tweaks(gs []*Group) {
 				stm32fmc(p)
 			case "pwr":
 				stm32pwr(p)
+			case "rcc":
+				stm32rcc(p)
 			case "sdio":
 				stm32sdio(p)
 			case "syscfg":
@@ -70,6 +72,9 @@ gloop:
 	namelen := len(buses[0])
 	var ahbLast, apbLast string
 	for _, r := range rcc.Regs {
+		if r == nil {
+			continue
+		}
 		i := strings.Index(r.Name, "ENR")
 		if i <= 0 {
 			continue
@@ -248,10 +253,20 @@ func stm32exti(p *Periph) {
 }
 
 func stm32flash(p *Periph) {
-	for _, r := range p.Regs {
+	for i, r := range p.Regs {
 		switch r.Name {
 		case "PDKEYR", "KEYR", "OPTKEYR":
 			r.Bits = nil
+		case "ACR_":
+			for k := i; k < len(p.Regs); k++ {
+				p.Regs[k] = nil
+			}
+			inst := *p.Insts[0]
+			p.Insts = append(p.Insts, &inst)
+			p.Insts[0].Name = "FLASH1"
+			p.Insts[1].Name = "FLASH2"
+			p.Insts[1].Base += fmt.Sprintf("+0x%X", r.Offset)
+			return
 		}
 	}
 }
@@ -310,6 +325,15 @@ func stm32pwr(p *Periph) {
 			pudc.Len++
 			p.Regs[i] = nil
 		case strings.HasPrefix(r.Name, "PDCR"):
+			p.Regs[i] = nil
+		}
+	}
+}
+
+func stm32rcc(p *Periph) {
+	for i, r := range p.Regs {
+		// BUG: core specific registers not supported
+		if strings.HasPrefix(r.Name, "C1_") || strings.HasPrefix(r.Name, "C2_") {
 			p.Regs[i] = nil
 		}
 	}
