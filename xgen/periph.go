@@ -168,7 +168,7 @@ import (
 type {{$p}} struct {
 	{{range .Regs -}}
 		{{if .Name -}}
-			{{.Name}} {{if .Len}}[{{.Len}}]{{end}}R{{.Name}}
+			{{.Name}} {{if .Len}}[{{.Len}}]{{end}}R{{.Type}}
 		{{- else -}}
 			_ {{if .Len}}[{{.Len}}]{{end}}uint{{.BitSiz}}
 		{{- end}}
@@ -198,7 +198,7 @@ func (p *{{$p}}) BaseAddr() uintptr {
 		type R{{$rr}} struct {
 		{{range $subr -}}
 			{{if .Name -}}
-				{{.Name}} R{{.Name}}
+				{{.Name}} R{{.Type}}
 			{{- else -}}
 				_ {{if .Len}}[{{.Len}}]{{end}}uint{{.BitSiz}}
 			{{- end}}
@@ -217,48 +217,50 @@ func (p *{{$p}}) BaseAddr() uintptr {
 			{{$mum  := print "mmio." $um}}
 			{{$rmum := print "rm." $um}}
 			{{$po   := print "unsafe.Pointer(uintptr(unsafe.Pointer(p))+" .Offset ")"}}
-			{{$bits := $r }}
-			{{$reg  := print "R" $r }}
-			{{$rm   := print "RM" $r }}
+			{{$bits := .Type }}
+			{{$reg  := print "R" .Type }}
+			{{$rm   := print "RM" .Type }}
 
-			type {{$bits}} {{$uint}}
+			{{if .NewT }}
+				type {{$bits}} {{$uint}}
 
-			type {{$reg}} struct { {{$mu}} }
+				type {{$reg}} struct { {{$mu}} }
 
-			func (r *{{$reg}}) LoadBits(mask {{$bits}}) {{$bits}} { return {{$bits}}({{$ru}}.LoadBits({{$uint}}(mask))) }
-			func (r *{{$reg}}) StoreBits(mask, b {{$bits}})       { {{$ru}}.StoreBits({{$uint}}(mask), {{$uint}}(b)) }
-			func (r *{{$reg}}) SetBits(mask {{$bits}})            { {{$ru}}.SetBits({{$uint}}(mask)) }
-			func (r *{{$reg}}) ClearBits(mask {{$bits}})          { {{$ru}}.ClearBits({{$uint}}(mask)) }
-			func (r *{{$reg}}) Load() {{$bits}}                   { return {{$bits}}({{$ru}}.Load()) }
-			func (r *{{$reg}}) Store(b {{$bits}})                 { {{$ru}}.Store({{$uint}}(b)) }
+				func (r *{{$reg}}) LoadBits(mask {{$bits}}) {{$bits}} { return {{$bits}}({{$ru}}.LoadBits({{$uint}}(mask))) }
+				func (r *{{$reg}}) StoreBits(mask, b {{$bits}})       { {{$ru}}.StoreBits({{$uint}}(mask), {{$uint}}(b)) }
+				func (r *{{$reg}}) SetBits(mask {{$bits}})            { {{$ru}}.SetBits({{$uint}}(mask)) }
+				func (r *{{$reg}}) ClearBits(mask {{$bits}})          { {{$ru}}.ClearBits({{$uint}}(mask)) }
+				func (r *{{$reg}}) Load() {{$bits}}                   { return {{$bits}}({{$ru}}.Load()) }
+				func (r *{{$reg}}) Store(b {{$bits}})                 { {{$ru}}.Store({{$uint}}(b)) }
 
-			type {{$rm}} struct { {{$mum}} }
+				type {{$rm}} struct { {{$mum}} }
 
-			func (rm {{$rm}}) Load() {{$bits}}   { return {{$bits}}({{$rmum}}.Load()) }
-			func (rm {{$rm}}) Store(b {{$bits}}) { {{$rmum}}.Store({{$uint}}(b)) }
+				func (rm {{$rm}}) Load() {{$bits}}   { return {{$bits}}({{$rmum}}.Load()) }
+				func (rm {{$rm}}) Store(b {{$bits}}) { {{$rmum}}.Store({{$uint}}(b)) }
 
-			{{if $subr}}
-				{{range .Bits}}
-					{{if $len}}
-						func (p *{{$p}}) {{.}}(n int) {{$rm}} {
-							return {{print $rm "{" $mum "{&p." $rr "[n]." $r "." $u "," $uint "(" . ")}}"}}
-						}
-					{{else}}
-						func (p *{{$p}}) {{.}}() {{$rm}} {
-							return {{print $rm "{" $mum "{&p." $rr "." $r "." $u "," $uint "(" . ")}}"}}
-						}
+				{{if $subr}}
+					{{range .Bits}}
+						{{if $len}}
+							func (p *{{$p}}) {{.}}(n int) {{$rm}} {
+								return {{print $rm "{" $mum "{&p." $rr "[n]." $r "." $u "," $uint "(" . ")}}"}}
+							}
+						{{else}}
+							func (p *{{$p}}) {{.}}() {{$rm}} {
+								return {{print $rm "{" $mum "{&p." $rr "." $r "." $u "," $uint "(" . ")}}"}}
+							}
+						{{end}}
 					{{end}}
-				{{end}}
-			{{else}}
-				{{range .Bits}}
-					{{if $len}}
-						func (p *{{$p}}) {{.}}(n int) {{$rm}} {
-							return {{print $rm "{" $mum "{&p." $r "[n]." $u "," $uint "(" . ")}}"}}
-						}
-					{{else}}
-						func (p *{{$p}}) {{.}}() {{$rm}} {
-							return {{print $rm "{" $mum "{&p." $r "." $u "," $uint "(" . ")}}"}}
-						}
+				{{else}}
+					{{range .Bits}}
+						{{if $len}}
+							func (p *{{$p}}) {{.}}(n int) {{$rm}} {
+								return {{print $rm "{" $mum "{&p." $r "[n]." $u "," $uint "(" . ")}}"}}
+							}
+						{{else}}
+							func (p *{{$p}}) {{.}}() {{$rm}} {
+								return {{print $rm "{" $mum "{&p." $r "." $u "," $uint "(" . ")}}"}}
+							}
+						{{end}}
 					{{end}}
 				{{end}}
 			{{end}}

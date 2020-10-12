@@ -35,6 +35,7 @@ type Reg struct {
 	Offset  uint64
 	BitSiz  uint
 	Name    string
+	Type    string
 	Len     int
 	Descr   string
 	Bits    []*BitField
@@ -114,10 +115,16 @@ func (p *Periph) Save(ctx *ctx) {
 		}
 		fmt.Fprintf(tw, "//  0x%03X\t%2d\t ", r.Offset, r.BitSiz)
 		name := r.Name
+		if r.Type != "" {
+			name += "(" + r.Type + ")"
+		}
 		if len(r.SubRegs) > 0 {
 			subregs := r.SubRegs[0].Name
 			for _, sr := range r.SubRegs[1:] {
 				subregs += "," + sr.Name
+				if sr.Type != "" {
+					subregs += "(" + sr.Type + ")"
+				}
 				if sr.Len != 0 {
 					subregs += fmt.Sprintf("[%d]", sr.Len)
 				}
@@ -169,13 +176,17 @@ func saveBits(w io.Writer, regs []*Reg) {
 			continue
 		}
 		fmt.Fprintln(w, "\nconst (")
+		typ := r.Type
+		if typ == "" {
+			typ = r.Name
+		}
 		for _, bf := range r.Bits {
 			if bf == nil {
 				continue
 			}
 			fmt.Fprintf(
 				w, "\t%s %s = 0x%02X << %d //+ %s\n",
-				bf.Name, r.Name, bf.Mask, bf.LSL, fixSpaces(bf.Descr),
+				bf.Name, typ, bf.Mask, bf.LSL, fixSpaces(bf.Descr),
 			)
 			for _, bv := range bf.Values {
 				if bv == nil {

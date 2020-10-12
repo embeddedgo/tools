@@ -13,6 +13,8 @@ import (
 
 type reg struct {
 	Name    string
+	Type    string
+	NewT    bool
 	BitSiz  int
 	Len     int
 	Offset  uint64
@@ -21,19 +23,43 @@ type reg struct {
 	BitRegs []*reg
 }
 
-func regNameLen(f, name string) (string, int) {
+var types = make(map[string]bool)
+
+func regNameTypeLen(f, name string) (rname, typ string, newt bool, length int) {
 	if name[len(name)-1] == ']' {
-		n := strings.LastIndexByte(name, '[')
-		if n <= 0 {
-			fdie(f, "bad register name: %s", name)
+		i := strings.LastIndexByte(name, '[')
+		if i <= 0 {
+			fdie(f, "bad register format: %s", name)
 		}
-		l, err := strconv.ParseUint(name[n+1:len(name)-1], 0, 0)
+		l, err := strconv.ParseUint(name[i+1:len(name)-1], 0, 0)
 		if err != nil {
 			fdie(f, "bad array length in %s", name)
 		}
-		return name[:n], int(l)
+		length = int(l)
+		name = name[:i]
 	}
-	return name, 0
+	if name[len(name)-1] == '}' {
+		i := strings.LastIndexByte(name, '{')
+		if i <= 0 {
+			fdie(f, "bad register format: %s", name)
+		}
+		typ = name[:i]
+	} else if name[len(name)-1] == ')' {
+		i := strings.LastIndexByte(name, '(')
+		if i <= 0 {
+			fdie(f, "bad register format: %s", name)
+		}
+		typ = name[i+1 : len(name)-1]
+		name = name[:i]
+	}
+	if typ == "" {
+		typ = name
+	}
+	newt = !types[typ]
+	if newt {
+		types[typ] = true
+	}
+	return name, typ, newt, length
 }
 
 func registers(f string, lines []string, decls []ast.Decl) ([]*reg, []string) {
@@ -76,7 +102,7 @@ loop:
 		default:
 			fdie(f, "bad register size %s: not 8, 16, 32, 64", sizstr)
 		}
-		name, length := regNameLen(f, name)
+		name, typ, newt, length := regNameTypeLen(f, name)
 		var subregs []*reg
 		if name[len(name)-1] == '}' {
 			n := strings.IndexByte(name, '{')
@@ -84,11 +110,17 @@ loop:
 				fdie(f, "bad register name: %s", name)
 			}
 			for _, sname := range strings.Split(name[n+1:len(name)-1], ",") {
-				sname, slen := regNameLen(f, sname)
+				sname, styp, snewt, slen := regNameTypeLen(f, sname)
 				if sname == "_" {
 					sname = ""
 				}
-				sr := &reg{Name: sname, BitSiz: size * 8, Len: slen}
+				sr := &reg{
+					Name:   sname,
+					Type:   styp,
+					NewT:   snewt,
+					BitSiz: size * 8,
+					Len:    slen,
+				}
 				subregs = append(subregs, sr)
 			}
 			name = name[:n]
@@ -127,6 +159,8 @@ loop:
 		}
 		r := &reg{
 			Name:    name,
+			Type:    typ,
+			NewT:    newt,
 			BitSiz:  size * 8,
 			Len:     length,
 			Offset:  offset,

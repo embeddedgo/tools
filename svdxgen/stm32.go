@@ -257,6 +257,11 @@ func stm32flash(p *Periph) {
 		switch r.Name {
 		case "PDKEYR", "KEYR", "OPTKEYR":
 			r.Bits = nil
+		case "OPTSR_CUR", "OPTSR_PRG":
+			r.Type = "OPTSR"
+			if r.Name == "OPTSR_PRG" {
+				r.Bits = nil
+			}
 		case "ACR_":
 			for k := i; k < len(p.Regs); k++ {
 				p.Regs[k] = nil
