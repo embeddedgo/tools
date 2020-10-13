@@ -23,9 +23,7 @@ type reg struct {
 	BitRegs []*reg
 }
 
-var types = make(map[string]bool)
-
-func regNameTypeLen(f, name string) (rname, typ string, newt bool, length int) {
+func regNameTypeLen(types map[string]bool, f, name string) (rname, typ string, newt bool, length int) {
 	if name[len(name)-1] == ']' {
 		i := strings.LastIndexByte(name, '[')
 		if i <= 0 {
@@ -67,6 +65,7 @@ func registers(f string, lines []string, decls []ast.Decl) ([]*reg, []string) {
 		regs    []*reg
 		nextoff uint64
 	)
+	types := make(map[string]bool)
 loop:
 	for len(lines) > 0 {
 		line := strings.TrimSpace(lines[0])
@@ -102,7 +101,7 @@ loop:
 		default:
 			fdie(f, "bad register size %s: not 8, 16, 32, 64", sizstr)
 		}
-		name, typ, newt, length := regNameTypeLen(f, name)
+		name, typ, newt, length := regNameTypeLen(types, f, name)
 		var subregs []*reg
 		if name[len(name)-1] == '}' {
 			n := strings.IndexByte(name, '{')
@@ -110,7 +109,7 @@ loop:
 				fdie(f, "bad register name: %s", name)
 			}
 			for _, sname := range strings.Split(name[n+1:len(name)-1], ",") {
-				sname, styp, snewt, slen := regNameTypeLen(f, sname)
+				sname, styp, snewt, slen := regNameTypeLen(types, f, sname)
 				if sname == "_" {
 					sname = ""
 				}
