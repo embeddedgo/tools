@@ -255,11 +255,31 @@ func stm32exti(p *Periph) {
 func stm32flash(p *Periph) {
 	for i, r := range p.Regs {
 		switch r.Name {
-		case "PDKEYR", "KEYR", "OPTKEYR":
+		case "PDKEYR", "KEYR", "KEYR1", "OPTKEYR":
 			r.Bits = nil
 		case "OPTSR_CUR", "OPTSR_PRG":
 			r.Type = "OPTSR"
 			if r.Name == "OPTSR_PRG" {
+				r.Bits = nil
+			}
+		case "PRAR_CUR1", "PRAR_PRG1":
+			r.Type = "PRAR"
+			if r.Name == "PRAR_PRG1" {
+				r.Bits = nil
+			}
+		case "SCAR_CUR1", "SCAR_PRG1":
+			r.Type = "SCAR"
+			if r.Name == "SCAR_PRG1" {
+				r.Bits = nil
+			}
+		case "WPSN_CUR1R", "WPSN_PRG1R":
+			r.Type = "WPSN"
+			if r.Name == "WPSN_PRG1R" {
+				r.Bits = nil
+			}
+		case "BOOT_CURR", "BOOT_PRGR":
+			r.Type = "BOOT"
+			if r.Name == "BOOT_PRGR" {
 				r.Bits = nil
 			}
 		case "ACR_":
