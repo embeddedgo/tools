@@ -7,8 +7,8 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
-	"unicode"
 )
 
 func stm32tweaks(gs []*Group) {
@@ -69,30 +69,22 @@ gloop:
 	buses := make([]string, 1, 8)
 	buses[0] = "Core"
 	fmt.Fprintf(w, "\t%s Bus = iota\n", buses[0])
-	namelen := len(buses[0])
-	var ahbLast, apbLast string
 	for _, r := range rcc.Regs {
 		if r == nil {
 			continue
 		}
 		i := strings.Index(r.Name, "ENR")
-		if i <= 0 {
+		if i < 3 || i > 5 {
 			continue
 		}
-		if c := r.Name[i-1]; c != 'B' && !unicode.IsDigit(rune(c)) {
+		if r.Name[0] != 'A' || r.Name[2] != 'B' {
 			continue
 		}
 		bus := r.Name[:i]
-		if len(r.Name) == i+3 || len(r.Name) == i+4 && r.Name[i+3] == '1' {
-			fmt.Fprintf(w, "\t%s\n", bus)
-			if bus[1] == 'H' {
-				ahbLast = bus
-			} else {
-				apbLast = bus
-			}
-			if len(bus) != namelen {
-				namelen = 0
-			}
+		if bus[i-1] == 'L' || bus[i-1] == 'H' {
+			bus = bus[:i-1]
+		}
+		if r.Name[i-1] != 'H' && r.Name[len(r.Name)-1] != '2' {
 			buses = append(buses, bus)
 		}
 		for _, bf := range r.Bits {
@@ -109,6 +101,20 @@ gloop:
 					inst.Bus = bus
 				}
 			}
+		}
+	}
+	sort.Strings(buses[1:])
+	var ahbLast, apbLast string
+	namelen := len(buses[0])
+	for _, bus := range buses[1:] {
+		fmt.Fprintf(w, "\t%s\n", bus)
+		if bus[1] == 'H' {
+			ahbLast = bus
+		} else {
+			apbLast = bus
+		}
+		if len(bus) != namelen {
+			namelen = 0
 		}
 	}
 	fmt.Fprintln(w)
