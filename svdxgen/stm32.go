@@ -376,20 +376,6 @@ func stm32rtc(p *Periph) {
 	var bkpr *Reg
 	for i, r := range p.Regs {
 		switch {
-		case r.Name == "TR":
-			r.Bits = []*BitField{
-				{"SEC", 0x7F, 0, "Seconds in BCD format", nil},
-				{"MIN", 0x7F, 8, "Minutes in BCD format", nil},
-				{"HOUR", 0x3F, 16, "Hours in BCD format", nil},
-				{"PM", 1, 22, "AM/PM notation", nil},
-			}
-		case r.Name == "DR":
-			r.Bits = []*BitField{
-				{"DAY", 0x3F, 0, "Day in BCD format", nil},
-				{"MONTH", 0x1F, 8, "Month in BCD format", nil},
-				{"WDAY", 7, 13, "Week day in BCD format", nil},
-				{"YEAR", 0xFF, 16, "Year in BCD format", nil},
-			}
 		case strings.HasPrefix(r.Name, "ALRMA"):
 			r.Name = r.Name[:4] + r.Name[5:]
 			r.Len = 2
@@ -398,17 +384,8 @@ func stm32rtc(p *Periph) {
 					b.Name = "A" + b.Name
 				}
 			} else {
-				r.Bits = []*BitField{
-					{"ASEC", 0x7F, 0, "Seconds in BCD format", nil},
-					{"ASECMSK", 1, 7, "Alarm seconds mask", nil},
-					{"AMIN", 0x7F, 8, "Minutes in BCD format", nil},
-					{"AMINMSK", 1, 15, "Alarm minutes mask", nil},
-					{"AHOUR", 0x3F, 16, "Hours in BCD format", nil},
-					{"APM", 1, 22, "AM/PM notation", nil},
-					{"AHOURMSK", 1, 23, "Alarm hours mask", nil},
-					{"ADAY", 0x3F, 24, "Day / week day in BCD format", nil},
-					{"AWDSEL", 1, 30, "Day / week day selection", nil},
-					{"ADAYMSK", 1, 31, "Alarm day mask", nil},
+				for _, b := range r.Bits {
+					b.Name = "A" + b.Name
 				}
 			}
 		case strings.HasPrefix(r.Name, "ALRMB"):
