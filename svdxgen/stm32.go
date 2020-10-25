@@ -376,20 +376,19 @@ func stm32rtc(p *Periph) {
 	var bkpr *Reg
 	for i, r := range p.Regs {
 		switch {
-		case strings.HasPrefix(r.Name, "ALRMA"):
-			r.Name = r.Name[:4] + r.Name[5:]
-			r.Len = 2
+		case strings.HasPrefix(r.Name, "ALRM"):
 			if strings.HasSuffix(r.Name, "SSR") {
+				r.Type = "ALRMSSR"
+			} else {
+				r.Type = "ALRM"
+			}
+			if strings.HasPrefix(r.Name, "ALRMA") {
 				for _, b := range r.Bits {
 					b.Name = "A" + b.Name
 				}
 			} else {
-				for _, b := range r.Bits {
-					b.Name = "A" + b.Name
-				}
+				r.Bits = nil
 			}
-		case strings.HasPrefix(r.Name, "ALRMB"):
-			p.Regs[i] = nil
 		case r.Name == "BKP0R":
 			r.Name = "BKPR"
 			r.Len = 1
