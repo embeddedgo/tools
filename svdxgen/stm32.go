@@ -20,6 +20,7 @@ func stm32tweaks(gs []*Group) {
 			stm32spi(g)
 		}
 		for _, p := range g.Periphs {
+			stm32irq(p)
 			switch p.Name {
 			case "dma":
 				stm32dma(p)
@@ -40,6 +41,14 @@ func stm32tweaks(gs []*Group) {
 			case "syscfg":
 				stm32syscfg(p)
 			}
+		}
+	}
+}
+
+func stm32irq(p *Periph) {
+	for _, inst := range p.Insts {
+		for _, irq := range inst.IRQs {
+			irq.Name = strings.ToUpper(irq.Name)
 		}
 	}
 }
@@ -380,7 +389,7 @@ func stm32rtc(p *Periph) {
 			if strings.HasSuffix(r.Name, "SSR") {
 				r.Type = "ALRMSSR"
 			} else {
-				r.Type = "ALRM"
+				r.Type = "ALRMR"
 			}
 			if strings.HasPrefix(r.Name, "ALRMA") {
 				for _, b := range r.Bits {
