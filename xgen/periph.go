@@ -241,11 +241,11 @@ func (p *{{$p}}) BaseAddr() uintptr {
 				{{if $subr}}
 					{{range .Bits}}
 						{{if $len}}
-							func (p *{{$p}}) {{.}}(n int) {{$rm}} {
+							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
 								return {{print $rm "{" $mum "{&p." $rr "[n]." $r "." $u "," $uint "(" . ")}}"}}
 							}
 						{{else}}
-							func (p *{{$p}}) {{.}}() {{$rm}} {
+							func {{.}}_ (p *{{$p}}) {{$rm}} {
 								return {{print $rm "{" $mum "{&p." $rr "." $r "." $u "," $uint "(" . ")}}"}}
 							}
 						{{end}}
@@ -253,11 +253,11 @@ func (p *{{$p}}) BaseAddr() uintptr {
 				{{else}}
 					{{range .Bits}}
 						{{if $len}}
-							func (p *{{$p}}) {{.}}(n int) {{$rm}} {
+							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
 								return {{print $rm "{" $mum "{&p." $r "[n]." $u "," $uint "(" . ")}}"}}
 							}
 						{{else}}
-							func (p *{{$p}}) {{.}}() {{$rm}} {
+							func {{.}}_ (p *{{$p}}) {{$rm}} {
 								return {{print $rm "{" $mum "{&p." $r "." $u "," $uint "(" . ")}}"}}
 							}
 						{{end}}
