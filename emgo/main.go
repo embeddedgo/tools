@@ -245,8 +245,10 @@ func main() {
 
 	var goCmd string
 	if err == nil {
-		// Use the local ./go/bin/go tool.
+		// Use the local ./go toolchain.
 		goCmd = filepath.Join(path, "bin", "go")
+		// Override GOROOT
+		dieErr(os.Setenv("GOROOT", path))
 	} else {
 		// Otherwise use go tool from PATH if available.
 		goCmd, err = exec.LookPath("go")
