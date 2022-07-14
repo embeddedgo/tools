@@ -1,6 +1,6 @@
 Emgo is a thin wrapper over go command. It has two main purposes:
 
-1. Allow you to install and use two independend Go compilers at the same time. Simply use the `go` command to use the unmodified Go toolchain or the `emgo` command to use the Embedded Go toolchain.
+1. Makes it easier to use Embedded Go for embedded programming in presence of orignal Go used for system programming.
 
 2. Allow you to customize some of the Embedded Go environment variables using a `build.cfg` file.
 

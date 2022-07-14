@@ -185,7 +185,7 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	}
 	tags += cfg["GOTARGET"]
 	if ldflags != "" {
-		tags += " "
+		ldflags += " "
 	}
 	ldflags += "-M " + cfg["GOMEM"]
 	if cfg["GOTEXT"] != "-" {
