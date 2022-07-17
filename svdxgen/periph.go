@@ -74,7 +74,7 @@ func (p *Periph) Save(ctx *ctx) {
 	defer w.Close()
 
 	w.donotedit()
-	fmt.Fprintln(w, "// +build", ctx.mcu)
+	fmt.Fprintln(w, "//go:build", ctx.mcu)
 	fmt.Fprintln(w)
 	fmt.Fprintln(
 		w,
@@ -101,7 +101,7 @@ func (p *Periph) Save(ctx *ctx) {
 		fmt.Fprintf(
 			tw, "//  %s\t %s\t %s\t %s\t", inst.Name, inst.Base, inst.Bus, irqs,
 		)
-		if inst.Descr != "" {
+		if inst.Descr != "" && strings.ToLower(inst.Descr) != p.Name {
 			fmt.Fprintf(tw, " %s\n", fixSpaces(inst.Descr))
 		} else {
 			fmt.Fprintln(tw)
@@ -289,9 +289,9 @@ func savePeriphs(ctx *ctx) {
 			Periph: p,
 		}
 		if sp.Description != nil {
-			inst.Descr = *sp.Description
+			inst.Descr = strings.TrimSpace(*sp.Description)
 		} else if sdp != nil && sdp.Description != nil {
-			inst.Descr = *sdp.Description
+			inst.Descr = strings.TrimSpace(*sdp.Description)
 		}
 		if len(sp.Interrupts) != 0 {
 			handleIRQs(ctx, inst, sp.Interrupts)
@@ -351,6 +351,8 @@ func savePeriphs(ctx *ctx) {
 	case strings.HasPrefix(ctx.mcu, "k210"):
 		k210tweaks(gsli)
 		k210bus(gsli, ctx)
+	case strings.HasPrefix(ctx.mcu, "imxrt"):
+		imxrttweaks(gsli)
 	}
 	saveIRQs(ctx)
 
@@ -372,8 +374,6 @@ func savePeriphs(ctx *ctx) {
 		g.Save(ctx)
 	}
 }
-
-//func handleRegs(p *Periph, cname string, offset uint64, width uint, srs []*svd.Register) {
 
 func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 	width := defwidth
@@ -417,7 +417,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 				if cr.Descr != "" {
 					cr.Descr += "; "
 				}
-				cr.Descr += *sr.Description
+				cr.Descr += strings.TrimSpace(*sr.Description)
 			}
 			cr.SubRegs = append(cr.SubRegs, r)
 			handleFields(r, sr.Fields)
@@ -443,7 +443,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 				r.BitSiz = uint(*sr.Size)
 			}
 			if sr.Description != nil {
-				r.Descr = *sr.Description
+				r.Descr = strings.TrimSpace(*sr.Description)
 			}
 			if i := strings.Index(r.Name, "%s"); i > 0 {
 				if r.Name[i-1] == '[' {
@@ -470,7 +470,7 @@ func handleFields(r *Reg, sfs []*svd.Field) {
 		bf := &BitField{Name: sf.Name}
 		r.Bits = append(r.Bits, bf)
 		if sf.Description != nil {
-			bf.Descr = *sf.Description
+			bf.Descr = strings.TrimSpace(*sf.Description)
 		}
 		switch {
 		case sf.BitRangeOffsetWidth != nil:
@@ -510,13 +510,15 @@ func handleFields(r *Reg, sfs []*svd.Field) {
 				if sev.Name == nil || sev.Value == nil {
 					continue
 				}
+				val, err := sev.Val()
+				dieErr(err)
 				bv := &BitFieldValue{
 					Name:  *sev.Name,
-					Value: uint64(*sev.Value),
+					Value: val,
 				}
 				bf.Values = append(bf.Values, bv)
 				if sev.Description != nil {
-					bv.Descr = *sev.Description
+					bv.Descr = strings.TrimSpace(*sev.Description)
 				}
 			}
 		}
@@ -539,7 +541,7 @@ func handleIRQs(ctx *ctx, inst *Instance, sirqs []*svd.Interrupt) {
 	for _, sirq := range sirqs {
 		irq := &IRQ{Value: int(sirq.Value), Name: sirq.Name, Inst: inst}
 		if sirq.Description != nil {
-			irq.Descr = *sirq.Description
+			irq.Descr = strings.TrimSpace(*sirq.Description)
 		}
 		ctx.irqmap[irq.Value] = append(ctx.irqmap[irq.Value], irq)
 		inst.IRQs = append(inst.IRQs, irq)
@@ -581,7 +583,7 @@ func saveIRQs(ctx *ctx) {
 	defer w.Close()
 
 	w.donotedit()
-	fmt.Fprintln(w, "// +build", ctx.mcu)
+	fmt.Fprintln(w, "//go:build", ctx.mcu)
 	fmt.Fprintln(w)
 	fmt.Fprintln(
 		w, "// Package irq provides the list of supported external interrupts.",

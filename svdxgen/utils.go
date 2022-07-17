@@ -25,7 +25,7 @@ func die(info ...interface{}) {
 	os.Exit(1)
 }
 
-func checkErr(err error) {
+func dieErr(err error) {
 	if err != nil {
 		die(err)
 	}
@@ -38,19 +38,19 @@ type cwc struct {
 
 func create(path string) cwc {
 	f, err := os.Create(path)
-	checkErr(err)
+	dieErr(err)
 	return cwc{f}
 }
 
 func (w cwc) Write(b []byte) (int, error) {
 	n, err := w.c.Write(b)
-	checkErr(err)
+	dieErr(err)
 	return n, nil
 }
 
 func (w cwc) WriteString(s string) (int, error) {
 	n, err := io.WriteString(w.c, s)
-	checkErr(err)
+	dieErr(err)
 	return n, nil
 }
 
@@ -59,14 +59,14 @@ func (w cwc) Close() error {
 	if f, ok := w.c.(*os.File); ok {
 		name = f.Name()
 	}
-	checkErr(w.c.Close())
+	dieErr(w.c.Close())
 	if name != "" {
 		name, err := filepath.Abs(name)
-		checkErr(err)
+		dieErr(err)
 		gofmt := exec.Command("gofmt", "-w", name)
 		gofmt.Stdout = os.Stdout
 		gofmt.Stderr = os.Stderr
-		checkErr(gofmt.Run())
+		dieErr(gofmt.Run())
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func mkdir(path string) {
 	err := os.Mkdir(path, 0755)
 	if e, ok := err.(*os.PathError); !ok ||
 		e.Err != os.ErrExist && e.Err != syscall.EEXIST {
-		checkErr(err)
+		dieErr(err)
 	}
 }
 

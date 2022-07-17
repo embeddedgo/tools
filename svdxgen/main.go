@@ -16,13 +16,6 @@ import (
 	"github.com/embeddedgo/tools/svd"
 )
 
-func dieErr(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
 var importRoot string
 
 type ctx struct {

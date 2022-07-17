@@ -6,6 +6,7 @@ package svd
 
 import (
 	"encoding/xml"
+	"errors"
 	"strconv"
 )
 
@@ -195,8 +196,32 @@ type EnumeratedValues struct {
 type EnumeratedValue struct {
 	Name        *string `xml:"name"`
 	Description *string `xml:"description"`
-	Value       *Uint64 `xml:"value"`
+	Value       *string `xml:"value"`
 	IsDefault   *bool   `xml:"isDefault"`
+}
+
+var ErrNilValue = errors.New("nil value")
+
+func (ev *EnumeratedValue) Val() (uint64, error) {
+	if ev.Value == nil {
+		return 0, ErrNilValue
+	}
+	s := *ev.Value
+	if s[0] == '#' {
+		// binary #1011 or binary #1x0x "do not care" format
+		a := make([]byte, len(s)+1)
+		a[0] = '0'
+		a[1] = 'b'
+		for i := 1; i < len(s); i++ {
+			b := s[i]
+			if b == 'x' {
+				b = '0'
+			}
+			a[i+1] = b
+		}
+		s = string(a)
+	}
+	return strconv.ParseUint(s, 0, 64)
 }
 
 type Cluster struct {

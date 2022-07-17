@@ -82,7 +82,7 @@ func saveMmap(ctx *ctx) {
 	w := create(filepath.Join(dir, ctx.mcu+".go"))
 	defer w.Close()
 	w.donotedit()
-	fmt.Fprintln(w, "// +build", ctx.mcu)
+	fmt.Fprintln(w, "//go:build", ctx.mcu)
 	fmt.Fprintln(w)
 	fmt.Fprintln(
 		w, "// Package mmap provides base memory adresses for all peripherals.",
