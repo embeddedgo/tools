@@ -4,6 +4,8 @@
 
 package main
 
+import "strings"
+
 func imxrttweaks(gs []*Group) {
 	for _, g := range gs {
 		for _, p := range g.Periphs {
@@ -20,13 +22,28 @@ func imxrttweaks(gs []*Group) {
 
 func imxrtgpio(p *Periph) {
 	for _, r := range p.Regs {
-		if len(r.Name) == 4 && r.Name[:3] == "ICR" {
-			n := r.Name[3]
-			r.Name = r.Name[:3]
-			if n == '1' {
-				r.Name += "A"
-			} else {
-				r.Name += "B"
+		switch r.Name {
+		case "DR", "GDIR", "PSR", "IMR", "ISR", "EDGE_SEL", "DR_SET", "DR_CLEAR", "DR_TOGGLE":
+			r.Bits = nil
+		case "ICR1", "ICR2":
+			for _, bf := range r.Bits {
+				var n string
+				if strings.HasPrefix(bf.Name, "ICR") {
+					n = bf.Name[3:]
+					bf.Name = "IC" + n
+				}
+				if strings.HasPrefix(bf.Descr, "ICR") {
+					bf.Descr = "Configuration for GPIO interrupt " + n
+				}
+				for _, v := range bf.Values {
+					if v == nil {
+						continue
+					}
+					v.Name = strings.TrimSuffix(v.Name, "_LEVEL")
+					v.Name = strings.TrimSuffix(v.Name, "_EDGE")
+					v.Name = bf.Name + "_" + v.Name
+					v.Descr = "Interrupt " + n + v.Descr[11:]
+				}
 			}
 		}
 	}
