@@ -22,7 +22,7 @@ func xgen(f string) {
 		for len(cg.List) > 0 {
 			c := strings.TrimLeft(cg.List[0].Text, "/*")
 			c = strings.TrimSpace(c)
-			if strings.HasPrefix(c, "+build") {
+			if strings.HasPrefix(c, "go:build") {
 				constraints = append(constraints, c)
 			} else if strings.HasPrefix(c, "Peripheral:") ||
 				strings.HasPrefix(c, "Instances:") {
