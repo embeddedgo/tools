@@ -269,7 +269,7 @@ func savePeriphs(ctx *ctx) {
 			}
 			for _, sc := range sp.Clusters {
 				if len(sc.Clusters) > 0 {
-					warn("cluster in cluster not supported:", sp.Name, sc.Name)
+					warn(sp.Name, sc.Name, ": cluster in cluster not supported")
 				}
 				handleRegs(p, ctx.defwidth, sc)
 			}
@@ -393,18 +393,18 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 		offset := uint64(0)
 		for _, sr := range sc.Registers {
 			if sr.DerivedFrom != nil {
-				warn("derived registers not supported:", p.Name, sr.Name)
+				warn(p.Name, sr.Name, ": derived registers not supported")
 				return
 			}
 			if sr.Dim != 0 {
-				warn("register dim in array cluster not supporetd:", p.Name, sr.Name)
+				warn(p.Name, sr.Name, ": register dim in array cluster not supporetd")
 				return
 			}
 			if sr.RegisterPropertiesGroup != nil && sr.Size != nil && uint(*sr.Size) != width {
-				warn("reg. width don't match cluster reg. width:", p.Name, sr.Name)
+				warn(p.Name, sr.Name, ": reg. width don't match cluster reg. width")
 			}
 			if uint64(sr.AddressOffset) != offset {
-				warn("holes in array cluster not supported", p.Name, sr.Name)
+				warn(p.Name, sr.Name, ":holes in array cluster not supported")
 				return
 			}
 			offset += uint64(width / 8)
@@ -430,7 +430,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 		}
 		for _, sr := range sc.Registers {
 			if sr.DerivedFrom != nil {
-				warn("derived registers not supported:", p.Name, sr.Name)
+				warn(p.Name, sr.Name, ": derived registers not supported")
 				continue
 			}
 			r := &Reg{
@@ -450,7 +450,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 					i--
 				}
 				if uint(sr.DimIncrement*8) != r.BitSiz {
-					warn("dimIncrement does not match register width")
+					warn(p.Name, sr.Name, ": dimIncrement does not match register width")
 				} else {
 					r.Name = r.Name[:i]
 					r.Len = int(sr.Dim)
@@ -464,7 +464,7 @@ func handleRegs(p *Periph, defwidth uint, sc *svd.Cluster) {
 func handleFields(r *Reg, sfs []*svd.Field) {
 	for _, sf := range sfs {
 		if sf.DerivedFrom != nil {
-			warn("derived fields not supported:", r.Name, sf.Name)
+			warn(r.Name, sf.Name, ": derived fields not supported")
 			continue
 		}
 		bf := &BitField{Name: sf.Name}
@@ -499,10 +499,10 @@ func handleFields(r *Reg, sfs []*svd.Field) {
 					}
 				}
 			}
-			warn("bad bit-range pattern:", r.Name, sf.Name)
+			warn(r.Name, sf.Name, ": bad bit-range pattern")
 			continue
 		default:
-			warn("bit-range not specified:", r.Name, sf.Name)
+			warn(r.Name, sf.Name, ": bit-range not specified")
 			continue
 		}
 		for _, sevs := range sf.EnumeratedValues {
