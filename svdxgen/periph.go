@@ -194,7 +194,7 @@ func saveBits(w io.Writer, regs []*Reg) {
 				}
 				fmt.Fprintf(
 					w, "\t%s %s = 0x%02X << %d",
-					bv.Name, r.Name, bv.Value, bf.LSL,
+					bv.Name, typ, bv.Value, bf.LSL,
 				)
 				if bv.Descr != "" {
 					fmt.Fprintf(w, " //  %s\n", fixSpaces(bv.Descr))

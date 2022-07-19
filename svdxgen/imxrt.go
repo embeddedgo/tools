@@ -12,6 +12,8 @@ func imxrttweaks(gs []*Group) {
 			switch p.Name {
 			case "gpio":
 				imxrtgpio(p)
+			case "iomuxc":
+				imxrtiomuxc(p)
 			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp",
 				"ccm_analog", "pmu", "nvic":
 				p.Insts = nil
@@ -43,6 +45,42 @@ func imxrtgpio(p *Periph) {
 					v.Name = strings.TrimSuffix(v.Name, "_EDGE")
 					v.Name = bf.Name + "_" + v.Name
 					v.Descr = "Interrupt " + n + v.Descr[11:]
+				}
+			}
+		}
+	}
+}
+
+func imxrtiomuxc(p *Periph) {
+	firstMux := true
+	firstPad := true
+	for _, r := range p.Regs {
+		switch {
+		case strings.HasPrefix(r.Name, "SW_MUX_CTL_PAD_GPIO_"):
+			r.Type = "SW_MUX_CTL"
+			if firstMux {
+				firstMux = false
+			} else {
+				r.Bits = nil
+			}
+		case strings.HasPrefix(r.Name, "SW_PAD_CTL_PAD_GPIO_"):
+			r.Type = "SW_PAD_CTL"
+			if firstPad {
+				firstPad = false
+			} else {
+				r.Bits = nil
+			}
+		case strings.HasSuffix(r.Name, "_SELECT_INPUT"):
+			for _, bf := range r.Bits {
+				if bf.Name == "DAISY" {
+					bf.Name = r.Name[:len(r.Name)-12] + "DAISY"
+				}
+			}
+		case strings.HasSuffix(r.Name, "_SELECT_INPUT_0") || strings.HasSuffix(r.Name, "_SELECT_INPUT_1"):
+			for _, bf := range r.Bits {
+				if bf.Name == "DAISY" {
+					rn := r.Name
+					bf.Name = rn[:len(rn)-14] + "DAISY" + rn[len(rn)-2:]
 				}
 			}
 		}
