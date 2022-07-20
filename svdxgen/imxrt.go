@@ -16,12 +16,13 @@ func imxrttweaks(gs []*Group) {
 			switch p.Name {
 			case "ccm":
 				imxrtccm(p)
+			case "ccm_analog":
+				imxrtccmanalog(p)
 			case "gpio":
 				imxrtgpio(p)
 			case "iomuxc":
 				imxrtiomuxc(p)
-			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp",
-				"ccm_analog", "pmu", "nvic":
+			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
 				p.Insts = nil
 			}
 		}
@@ -68,8 +69,7 @@ func imxrtgpio(p *Periph) {
 }
 
 func imxrtiomuxc(p *Periph) {
-	firstMux := true
-	firstPad := true
+	firstMux, firstPad := true, true
 	for _, r := range p.Regs {
 		switch {
 		case strings.HasPrefix(r.Name, "SW_MUX_CTL_PAD_GPIO_"):
@@ -131,6 +131,66 @@ func imxrtccm(p *Periph) {
 			if strings.HasPrefix(r.Name, "CCGR") {
 				for _, bf := range r.Bits {
 					bf.Name = "CG" + r.Name[4:] + "_" + bf.Name[2:]
+				}
+			}
+		}
+	}
+}
+
+func imxrtccmanalog(p *Periph) {
+	firstUSB, firstAV, firstPFD := true, true, true
+	for _, r := range p.Regs {
+		switch {
+		case strings.HasPrefix(r.Name, "PLL_USB"):
+			r.Type = "PLL_USB"
+			if firstUSB {
+				firstUSB = false
+			} else {
+				r.Bits = nil
+			}
+		case strings.HasPrefix(r.Name, "PLL_AUDIO"), strings.HasPrefix(r.Name, "PLL_VIDEO"):
+			r.Type = "PLL_AV"
+			if firstAV {
+				firstAV = false
+			} else {
+				r.Bits = nil
+			}
+		case strings.HasPrefix(r.Name, "PFD"):
+			r.Type = "PFD"
+			if firstPFD {
+				firstPFD = false
+			} else {
+				r.Bits = nil
+			}
+		case r.Name == "MISC2":
+			for _, bf := range r.Bits {
+				if strings.HasSuffix(bf.Name, "_STEP_TIME") {
+					for _, v := range bf.Values {
+						v.Name = bf.Name[:len(bf.Name)-4] + v.Name
+					}
+				}
+			}
+		}
+		if len(r.Name) > 4 {
+			n := len(r.Name) - 4
+			switch r.Name[n:] {
+			case "_SET", "_CLR", "_TOG":
+				if r.Type == "" {
+					r.Type = r.Name[:n]
+				}
+				r.Bits = nil
+			}
+			for _, bf := range r.Bits {
+				typ := r.Type
+				if typ == "" {
+					typ = r.Name
+				}
+				if strings.HasPrefix(bf.Name, typ) {
+					continue
+				}
+				bf.Name = typ + "_" + bf.Name
+				for _, v := range bf.Values {
+					v.Name = typ + "_" + v.Name
 				}
 			}
 		}
