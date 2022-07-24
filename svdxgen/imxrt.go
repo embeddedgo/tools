@@ -127,6 +127,22 @@ func imxrtccm(p *Periph) {
 			} else {
 				r.Bits = nil
 			}
+		case "CLPCR":
+			for _, bf := range r.Bits {
+				if bf.Name == "LPM" {
+					for _, v := range bf.Values {
+						switch v.Name {
+						case "LPM_0":
+							v.Name = "LPM_RUN"
+						case "LPM_1":
+							v.Name = "LPM_WAIT"
+						case "LPM_2":
+							v.Name = "LPM_STOP"
+						}
+					}
+					break
+				}
+			}
 		default:
 			if strings.HasPrefix(r.Name, "CCGR") {
 				for _, bf := range r.Bits {
