@@ -22,6 +22,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtgpio(p)
 			case "iomuxc":
 				imxrtiomuxc(p)
+			case "wdog":
+				imxrtwdog(p)
 			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
 				p.Insts = nil
 			}
@@ -75,6 +77,20 @@ func imxrtiomuxc(p *Periph) {
 		case strings.HasPrefix(r.Name, "SW_MUX_CTL_PAD_GPIO_"):
 			r.Type = "SW_MUX_CTL"
 			if firstMux {
+				bf := r.Bits[0]
+				bf.Mask = 0xf
+				bf.Values = []*BitFieldValue{
+					{"ALT0", "Select ALT0 mux mode", 0},
+					{"ALT1", "Select ALT1 mux mode", 1},
+					{"ALT2", "Select ALT2 mux mode", 2},
+					{"ALT3", "Select ALT3 mux mode", 3},
+					{"ALT4", "Select ALT4 mux mode", 4},
+					{"ALT5", "Select ALT5 mux mode", 5},
+					{"ALT6", "Select ALT6 mux mode", 6},
+					{"ALT7", "Select ALT7 mux mode", 7},
+					{"ALT8", "Select ALT8 mux mode", 8},
+					{"ALT9", "Select ALT9 mux mode", 9},
+				}
 				firstMux = false
 			} else {
 				r.Bits = nil
@@ -82,6 +98,15 @@ func imxrtiomuxc(p *Periph) {
 		case strings.HasPrefix(r.Name, "SW_PAD_CTL_PAD_GPIO_"):
 			r.Type = "SW_PAD_CTL"
 			if firstPad {
+				for _, bf := range r.Bits {
+					if bf.Name == "SPEED" {
+						for _, v := range bf.Values {
+							if v.Value == 2 {
+								v.Name = "SPEED_2_fast_150MHz"
+							}
+						}
+					}
+				}
 				firstPad = false
 			} else {
 				r.Bits = nil
@@ -209,6 +234,14 @@ func imxrtccmanalog(p *Periph) {
 					v.Name = typ + "_" + v.Name
 				}
 			}
+		}
+	}
+}
+
+func imxrtwdog(p *Periph) {
+	for _, r := range p.Regs {
+		if r.Name == "WSR" {
+			r.Bits = nil
 		}
 	}
 }
