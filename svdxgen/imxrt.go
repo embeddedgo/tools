@@ -34,9 +34,13 @@ func imxrttweaks(gs []*Group) {
 func imxrtonebit(p *Periph) {
 	for _, r := range p.Regs {
 		for _, bf := range r.Bits {
-			if bf.Mask>>bits.TrailingZeros64(bf.Mask) == 1 {
-				bf.Values = nil
+			if bf.Mask>>bits.TrailingZeros64(bf.Mask) != 1 {
+				continue
 			}
+			if p.Name == "iomuxc" && bf.Name == "DAISY" {
+				continue
+			}
+			bf.Values = nil
 		}
 	}
 }
