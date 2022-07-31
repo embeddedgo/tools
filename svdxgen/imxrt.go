@@ -14,6 +14,8 @@ func imxrttweaks(gs []*Group) {
 		for _, p := range g.Periphs {
 			imxrtonebit(p)
 			switch p.Name {
+			case "aipstz":
+				imxrtaipstz(p)
 			case "ccm":
 				imxrtccm(p)
 			case "ccm_analog":
@@ -41,6 +43,29 @@ func imxrtonebit(p *Periph) {
 				continue
 			}
 			bf.Values = nil
+		}
+	}
+}
+
+func imxrtaipstz(p *Periph) {
+	var opacr *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "MPR":
+			for _, bf := range r.Bits {
+				bf.Values = nil
+			}
+		case strings.HasPrefix(r.Name, "OPACR"):
+			if r.Name == "OPACR" {
+				opacr = r
+				opacr.Len = 1
+				for _, bf := range r.Bits {
+					bf.Values = nil
+				}
+			} else {
+				p.Regs[i] = nil
+				opacr.Len++
+			}
 		}
 	}
 }
