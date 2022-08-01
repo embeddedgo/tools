@@ -20,6 +20,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtccm(p)
 			case "ccm_analog":
 				imxrtccmanalog(p)
+			case "dma":
+				imxrtdma(p)
 			case "gpio":
 				imxrtgpio(p)
 			case "iomuxc":
@@ -263,6 +265,39 @@ func imxrtccmanalog(p *Periph) {
 					v.Name = typ + "_" + v.Name
 				}
 			}
+		}
+	}
+}
+
+func imxrtdma(p *Periph) {
+	for _, r := range p.Regs {
+		if strings.HasPrefix(r.Name, "DCHPRI") {
+			r.Type = "DCHPR"
+			if r.Name != "DCHPRI3" {
+				r.Bits = nil
+			}
+			continue
+		}
+		switch r.Name {
+		case "ES":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "ERRCHN":
+					bf.Name = "CNE"
+				case "ECX":
+					bf.Name = "CXE"
+				}
+			}
+		case "CEEI":
+			r.Type = "CTRL"
+			r.Bits = []*BitField{
+				{"CMASK", 31, 0, "Affect the specified channels", nil},
+				{"CALL", 1, 6, "Affect all channels", nil},
+				{"NOP", 1, 7, "Allows 32-bit write to selected CTRL registers", nil},
+			}
+		case "SEEI", "CERQ", "SERQ", "CDNE", "SSRT", "CERR", "CINT":
+			r.Type = "CTRL"
+			r.Bits = nil
 		}
 	}
 }
