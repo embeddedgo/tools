@@ -117,12 +117,8 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 		return
 	}
 
-	if cfg["GOTEXT"] == "" {
-		cfg["GOTEXT"] = def.GOTEXT
-	}
-
 	// Check mandatory variables
-	if cfg["GOTEXT"] == "" {
+	if cfg["GOTARGET"] != "k210" && cfg["GOTEXT"] == "" {
 		die("GOTEXT variable is not set\n")
 	}
 	if cfg["GOMEM"] == "" {
@@ -188,8 +184,8 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 		ldflags += " "
 	}
 	ldflags += "-M " + cfg["GOMEM"]
-	if cfg["GOTEXT"] != "-" {
-		ldflags += " -T " + cfg["GOTEXT"]
+	if cfg["GOTEXT"] != "" {
+		ldflags += " -F " + cfg["GOTEXT"]
 	}
 	if cfg["GOSTRIPFN"] != "" {
 		ldflags += " -stripfn " + cfg["GOSTRIPFN"]
@@ -296,13 +292,13 @@ func main() {
 	}
 }
 
-var defaults = map[string]struct{ GOARCH, GOARM, GOTEXT, ISRNAMES string }{
-	"imxrt1060": {"thumb", "7d", "0x60002000", ""},
-	"k210":      {"riscv64", "", "-", "kendryte/hal/irq"},
-	"nrf52840":  {"thumb", "7", "", "nrf5/hal/irq"},
-	"stm32f215": {"thumb", "7", "0x8000000", "stm32/hal/irq"},
-	"stm32f407": {"thumb", "7", "0x8000000", "stm32/hal/irq"},
-	"stm32f412": {"thumb", "7", "0x8000000", "stm32/hal/irq"},
-	"stm32h7x3": {"thumb", "7d", "0x8000000", "stm32/hal/irq"},
-	"stm32l4x6": {"thumb", "7", "0x8000000", "stm32/hal/irq"},
+var defaults = map[string]struct{ GOARCH, GOARM, ISRNAMES string }{
+	"imxrt1060": {"thumb", "7d", ""},
+	"k210":      {"riscv64", "", "kendryte/hal/irq"},
+	"nrf52840":  {"thumb", "7", "nrf5/hal/irq"},
+	"stm32f215": {"thumb", "7", "stm32/hal/irq"},
+	"stm32f407": {"thumb", "7", "stm32/hal/irq"},
+	"stm32f412": {"thumb", "7", "stm32/hal/irq"},
+	"stm32h7x3": {"thumb", "7d", "stm32/hal/irq"},
+	"stm32l4x6": {"thumb", "7", "stm32/hal/irq"},
 }
