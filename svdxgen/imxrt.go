@@ -26,6 +26,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtgpio(p)
 			case "iomuxc":
 				imxrtiomuxc(p)
+			case "lpuart":
+				imxrtlpuart(p)
 			case "wdog":
 				imxrtwdog(p)
 			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
@@ -300,6 +302,23 @@ func imxrtdma(p *Periph) {
 			r.Bits = nil
 		}
 	}
+}
+
+func imxrtlpuart(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "FIFO":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "RXEMPT":
+					bf.Name = "RXFEMPT"
+				case "TXEMPT":
+					bf.Name = "TXFEMPT"
+				}
+			}
+		}
+	}
+
 }
 
 func imxrtwdog(p *Periph) {
