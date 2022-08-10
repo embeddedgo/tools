@@ -272,7 +272,11 @@ func imxrtccmanalog(p *Periph) {
 }
 
 func imxrtdma(p *Periph) {
-	for _, r := range p.Regs {
+	var tcd Reg
+	for i, r := range p.Regs {
+		if r == nil {
+			continue
+		}
 		if strings.HasPrefix(r.Name, "DCHPRI") {
 			r.Type = "DCHPR"
 			if r.Name != "DCHPRI3" {
@@ -280,7 +284,68 @@ func imxrtdma(p *Periph) {
 			}
 			continue
 		}
+		if strings.HasPrefix(r.Name, "TCD") {
+			switch {
+			case strings.HasPrefix(r.Name, "TCD0_"):
+				r.Name = r.Name[5:]
+				switch r.Name {
+				case "SADDR":
+					tcd = *r
+					tcd.Name = "TCD"
+					tcd.Len = 1
+					tcd.Descr = "Transfer Control Descriptors"
+					p.Regs[i] = &tcd
+					r.Bits = nil
+				case "SOFF":
+					r.Name = "ATTR_SOFF"
+					attr := p.Regs[i+1]
+					p.Regs[i+1] = nil
+					for _, bf := range attr.Bits {
+						bf.LSL += 16
+					}
+					r.Bits = append(r.Bits, attr.Bits...)
+				case "NBYTES_MLOFFNO":
+					r.Name = "ML_NBYTES"
+					r.Bits = nil
+					p.Regs[i+1] = nil
+					p.Regs[i+2] = nil
+				case "SLAST", "DADDR":
+					r.Bits = nil
+				case "DOFF":
+					r.Name = "ELINK_CITER_DOFF"
+					r.Bits = []*BitField{
+						{"DOFF", 0xffff, 0, "Destination Address Signed Offset", nil},
+						{"ELINK_CITER", 0xffff, 16, "Current Minor Loop Link, Major Loop Count, Channel Linking", nil},
+					}
+					p.Regs[i+1] = nil
+					p.Regs[i+2] = nil
+				case "DLASTSGA":
+					r.Bits = nil
+				case "CSR":
+					r.Name = "ELINK_BITER_CSR"
+					r.Bits = append(
+						r.Bits,
+						&BitField{"ELINK_BITER", 0xffff, 16, "Beginning Minor Loop Link, Major Loop Count, Channel Linking Disabled", nil},
+					)
+					p.Regs[i+1] = nil
+					p.Regs[i+2] = nil
+				}
+				tcd.SubRegs = append(tcd.SubRegs, r)
+			case strings.HasSuffix(r.Name, "_SADDR"):
+				tcd.Len++
+			}
+			if p.Regs[i] == r {
+				p.Regs[i] = nil
+			}
+			continue
+		}
 		switch r.Name {
+		case "CR":
+			for _, bf := range r.Bits {
+				if bf.Name == "ACTIVE" {
+					bf.Name = "ACT"
+				}
+			}
 		case "ES":
 			for _, bf := range r.Bits {
 				switch bf.Name {
