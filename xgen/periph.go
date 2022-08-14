@@ -168,7 +168,11 @@ import (
 type {{$p}} struct {
 	{{range .Regs -}}
 		{{if .Name -}}
-			{{.Name}} {{if .Len}}[{{.Len}}]{{end}}R{{.Type}}
+			{{- if .SubRegs -}}
+				{{.Name}} {{if .Len}}[{{.Len}}]{{end}}S{{.Type}}
+			{{- else -}}
+				{{.Name}} {{if .Len}}[{{.Len}}]{{end}}mmio.R{{.BitSiz}}[{{.Type}}]
+			{{- end -}}
 		{{- else -}}
 			_ {{if .Len}}[{{.Len}}]{{end}}uint{{.BitSiz}}
 		{{- end}}
@@ -191,76 +195,41 @@ func (p *{{$p}}) BaseAddr() uintptr {
 
 {{range .Regs}}
 	{{$len  := .Len}}
-	{{$subr := .SubRegs}}
-	{{$rr   := .Name}}
-
-	{{if $subr -}}
-		type R{{$rr}} struct {
-		{{range $subr -}}
+	{{$r   := .Name}}
+	{{$sr := .SubRegs}}
+	{{$bs := .BitSiz}}
+	{{if .SubRegs -}}
+		type S{{.Type}} struct {
+		{{range .SubRegs -}}
 			{{if .Name -}}
-				{{.Name}} R{{.Type}}
+				{{.Name}} mmio.R{{$bs}}[{{.Type}}]
 			{{- else -}}
-				_ {{if .Len}}[{{.Len}}]{{end}}uint{{.BitSiz}}
+				_ {{if .Len}}[{{.Len}}]{{end}}uint{{$bs}}
 			{{- end}}
 		{{end}}
-	}
+		}
 	{{end}}
-
-	{{range .BitRegs}}
+	{{range .BitRegs -}}
 		{{if .Name}}
-			{{$r    := .Name}}
-			{{$uint := print "uint" .BitSiz}}
-			{{$u    := print "U" .BitSiz}}
-			{{$mu   := print "mmio." $u}}
-			{{$ru   := print "r." $u}}
-			{{$um   := print "UM" .BitSiz }}
-			{{$mum  := print "mmio." $um}}
-			{{$rmum := print "rm." $um}}
-			{{$po   := print "unsafe.Pointer(uintptr(unsafe.Pointer(p))+" .Offset ")"}}
-			{{$bits := .Type }}
-			{{$reg  := print "R" .Type }}
-			{{$rm   := print "RM" .Type }}
-
-			{{if .NewT }}
-				type {{$bits}} {{$uint}}
-
-				type {{$reg}} struct { {{$mu}} }
-
-				func (r *{{$reg}}) LoadBits(mask {{$bits}}) {{$bits}} { return {{$bits}}({{$ru}}.LoadBits({{$uint}}(mask))) }
-				func (r *{{$reg}}) StoreBits(mask, b {{$bits}})       { {{$ru}}.StoreBits({{$uint}}(mask), {{$uint}}(b)) }
-				func (r *{{$reg}}) SetBits(mask {{$bits}})            { {{$ru}}.SetBits({{$uint}}(mask)) }
-				func (r *{{$reg}}) ClearBits(mask {{$bits}})          { {{$ru}}.ClearBits({{$uint}}(mask)) }
-				func (r *{{$reg}}) Load() {{$bits}}                   { return {{$bits}}({{$ru}}.Load()) }
-				func (r *{{$reg}}) Store(b {{$bits}})                 { {{$ru}}.Store({{$uint}}(b)) }
-
-				type {{$rm}} struct { {{$mum}} }
-
-				func (rm {{$rm}}) Load() {{$bits}}   { return {{$bits}}({{$rmum}}.Load()) }
-				func (rm {{$rm}}) Store(b {{$bits}}) { {{$rmum}}.Store({{$uint}}(b)) }
-
-				{{if $subr}}
-					{{range .Bits}}
-						{{if $len}}
-							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $rr "[n]." $r "." $u "," $uint "(" . ")}}"}}
-							}
-						{{else}}
-							func {{.}}_ (p *{{$p}}) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $rr "." $r "." $u "," $uint "(" . ")}}"}}
-							}
-						{{end}}
+			{{$br := .Name}}
+			{{$rm := print "mmio.RM" $bs "[" .Type "]"}}
+			{{if .NewT}}
+				type {{.Type}} uint{{$bs}}
+				{{if $sr}}
+					{{range .Bits -}}
+						{{if $len -}}
+							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ &p.{{$r}}[i].{{$br}}, {{.}}} }
+						{{- else -}}
+							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ &p.{{$r}}.{{$br}}, {{.}}} }
+						{{- end}}
 					{{end}}
 				{{else}}
-					{{range .Bits}}
-						{{if $len}}
-							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $r "[n]." $u "," $uint "(" . ")}}"}}
-							}
-						{{else}}
-							func {{.}}_ (p *{{$p}}) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $r "." $u "," $uint "(" . ")}}"}}
-							}
-						{{end}}
+					{{range .Bits -}}
+						{{if $len -}}
+							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ &p.{{$br}}[i], {{.}}} }
+						{{- else -}}
+							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ &p.{{$br}}, {{.}}} }
+						{{- end}}
 					{{end}}
 				{{end}}
 			{{end}}
