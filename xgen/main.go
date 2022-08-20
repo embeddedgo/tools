@@ -5,11 +5,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"os"
 	"strings"
+	"text/template"
 )
 
 func xgen(f string) {
@@ -36,12 +38,28 @@ func xgen(f string) {
 	}
 }
 
+var tmpl *template.Template
+
 func main() {
-	if len(os.Args) < 2 {
-		die("xgen FILE1.go FILE2.go ...")
+	g := flag.Bool("g", false, "use mmio.R* generic types")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "xgen [options] FILE1.go FILE2.go ...")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	flag.Parse()
+
+	if len(flag.Args()) == 0 {
+		flag.Usage()
 	}
 
-	for _, f := range os.Args[1:] {
+	if *g {
+		tmpl = template.Must(template.New("R").Parse(tmplR))
+	} else {
+		tmpl = template.Must(template.New("U").Parse(tmplU))
+	}
+
+	for _, f := range flag.Args() {
 		if !strings.HasSuffix(f, ".go") {
 			fmt.Fprintln(os.Stderr, "ignoring:", f)
 			continue
