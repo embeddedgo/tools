@@ -293,7 +293,7 @@ func main() {
 }
 
 var defaults = map[string]struct{ GOARCH, GOARM, ISRNAMES string }{
-	"imxrt1060": {"thumb", "7d", ""},
+	"imxrt1060": {"thumb", "7d", "imxrt/hal/irq"},
 	"k210":      {"riscv64", "", "kendryte/hal/irq"},
 	"nrf52840":  {"thumb", "7", "nrf5/hal/irq"},
 	"stm32f215": {"thumb", "7", "stm32/hal/irq"},
