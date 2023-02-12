@@ -18,6 +18,8 @@ func stm32tweaks(gs []*Group) {
 			stm32gpio(g)
 		case "spi":
 			stm32spi(g)
+		case "tim":
+			stm32tim(g)
 		}
 		for _, p := range g.Periphs {
 			stm32irq(p)
@@ -200,6 +202,40 @@ func stm32spi(g *Group) {
 		switch {
 		case r.Name == "DR":
 			r.Bits = nil
+		}
+	}
+}
+
+func stm32tim(g *Group) {
+	var ccmr *Reg
+	for _, p := range g.Periphs {
+		for i, r := range p.Regs {
+			switch r.Name {
+			case "CNT", "PSC", "ARR", "RCR", "DMAR":
+				r.Bits = nil
+				continue
+			}
+			switch {
+			case strings.HasPrefix(r.Name, "CCR"):
+				r.Type = "CCR"
+				r.Bits = nil
+			case strings.HasPrefix(r.Name, "CCMR"):
+				switch {
+				case strings.HasSuffix(r.Name, "_Output"):
+					r.Name = r.Name[:5]
+					if k := strings.IndexByte(r.Descr, '('); k >= 0 {
+						r.Descr = r.Descr[:k]
+					}
+					ccmr = r
+				case strings.HasSuffix(r.Name, "_Input"):
+					for _, bf := range r.Bits {
+						if bf.Name[0] == 'I' {
+							ccmr.Bits = append(ccmr.Bits, bf)
+						}
+					}
+					p.Regs[i] = nil
+				}
+			}
 		}
 	}
 }
