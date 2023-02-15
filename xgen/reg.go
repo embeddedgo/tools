@@ -65,7 +65,10 @@ func registers(f string, lines []string, decls []ast.Decl) ([]*reg, []string) {
 		regs    []*reg
 		nextoff uint64
 	)
-	types := make(map[string]bool)
+	types := map[string]bool{
+		"int64": true, "int32": true, "int16": true, "int8": true,
+		"uint64": true, "uint32": true, "uint16": true, "uint8": true,
+	}
 loop:
 	for len(lines) > 0 {
 		line := strings.TrimSpace(lines[0])
@@ -210,6 +213,15 @@ loop:
 			}
 			for _, id := range v.Names {
 				r.Bits = append(r.Bits, id.Name)
+			}
+		}
+	}
+	if generics {
+		for _, r := range regs {
+			if r.Bits == nil && r.SubRegs == nil && r.Type == r.Name {
+				// Avoid new type and use raw uintN register instead.
+				r.Type = "uint" + strconv.Itoa(r.BitSiz)
+				r.NewT = false
 			}
 		}
 	}

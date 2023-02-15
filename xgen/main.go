@@ -38,10 +38,13 @@ func xgen(f string) {
 	}
 }
 
-var tmpl *template.Template
+var (
+	tmpl     *template.Template
+	generics bool
+)
 
 func main() {
-	g := flag.Bool("g", false, "use mmio.R* generic types")
+	flag.BoolVar(&generics, "g", false, "use mmio.R* generic types")
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "xgen [options] FILE1.go FILE2.go ...")
 		flag.PrintDefaults()
@@ -53,7 +56,7 @@ func main() {
 		flag.Usage()
 	}
 
-	if *g {
+	if generics {
 		tmpl = template.Must(template.New("R").Parse(tmplR))
 	} else {
 		tmpl = template.Must(template.New("U").Parse(tmplU))
