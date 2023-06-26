@@ -212,7 +212,9 @@ loop:
 				continue
 			}
 			for _, id := range v.Names {
-				r.Bits = append(r.Bits, id.Name)
+				if id.Name != "_" {
+					r.Bits = append(r.Bits, id.Name)
+				}
 			}
 		}
 	}
