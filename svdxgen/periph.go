@@ -206,7 +206,7 @@ func saveBits(w io.Writer, regs []*Reg) {
 		fmt.Fprintln(w, ")")
 		fmt.Fprintln(w, "\nconst (")
 		for _, bf := range r.Bits {
-			if bf == nil {
+			if bf == nil || bf.Name == "_" {
 				continue
 			}
 			fmt.Fprintf(w, "\t%sn = %d\n", bf.Name, bf.LSL)

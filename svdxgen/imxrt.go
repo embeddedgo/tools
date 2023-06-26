@@ -30,6 +30,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtlpuart(p)
 			case "usb":
 				imxrtusb(p)
+			case "usbphy":
+				imxrtusbphy(p)
 			case "wdog":
 				imxrtwdog(p)
 			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
@@ -427,6 +429,42 @@ func imxrtusb(p *Periph) {
 				}
 			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX":
 				r.Bits = nil
+			}
+		}
+	}
+}
+
+func imxrtusbphy(p *Periph) {
+	for _, r := range p.Regs {
+		switch {
+		case strings.HasPrefix(r.Name, "PWD_"):
+			r.Type = "PWD"
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "TX_"):
+			r.Type = "TX"
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "RX_"):
+			r.Type = "RX"
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "CTRL_"):
+			r.Type = "CTRL"
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "DEBUG_"):
+			r.Type = "DEBUG"
+			r.Bits = nil
+		case strings.HasPrefix(r.Name, "DEBUG1_"):
+			r.Type = "DEBUG1"
+			r.Bits = nil
+		case r.Name == "DEBUG":
+			for _, bf := range r.Bits {
+				if bf.Name == "CLKGATE" {
+					bf.Name = "GATECLK"
+				}
+			}
+		}
+		for _, bf := range r.Bits {
+			if strings.HasPrefix(bf.Name, "RSVD") {
+				bf.Name = "_"
 			}
 		}
 	}
