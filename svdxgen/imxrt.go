@@ -28,6 +28,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtiomuxc(p)
 			case "lpuart":
 				imxrtlpuart(p)
+			case "usb":
+				imxrtusb(p)
 			case "wdog":
 				imxrtwdog(p)
 			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
@@ -383,7 +385,51 @@ func imxrtlpuart(p *Periph) {
 			}
 		}
 	}
+}
 
+func imxrtusb(p *Periph) {
+	var gpt, epc *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "GPTIMER0LD":
+			gpt = r
+			gpt.Name = "GPTIMER"
+			r.SubRegs = []*Reg{
+				{Name: "LD"},
+				{Name: "CTRL", Type: "GPTCTRL"},
+			}
+			gpt.Len = 2
+			gpt.Descr = "General Purpose Timers"
+		case r.Name == "GPTIMER0CTRL":
+			gpt.SubRegs[1].Bits = r.Bits
+			p.Regs[i] = nil
+		case strings.HasPrefix(r.Name, "GPTIMER"):
+			p.Regs[i] = nil
+		case r.Name == "ENDPTCTRL0":
+			p.Regs[i] = nil
+		case r.Name == "ENDPTCTRL1":
+			epc = r
+			epc.Name = "ENDPTCTRL"
+			epc.Descr = "Endpoint Control"
+			epc.Len = 2
+		case strings.HasPrefix(r.Name, "ENDPTCTRL"):
+			epc.Len++
+			p.Regs[i] = nil
+		default:
+			switch r.Name {
+			case "HCCPARAMS":
+				for _, bf := range r.Bits {
+					bf.Name = "HP" + bf.Name
+				}
+			case "DCCPARAMS":
+				for _, bf := range r.Bits {
+					bf.Name = "DP" + bf.Name
+				}
+			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX":
+				r.Bits = nil
+			}
+		}
+	}
 }
 
 func imxrtwdog(p *Periph) {
