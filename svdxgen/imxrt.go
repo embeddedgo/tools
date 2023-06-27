@@ -28,13 +28,17 @@ func imxrttweaks(gs []*Group) {
 				imxrtiomuxc(p)
 			case "lpuart":
 				imxrtlpuart(p)
+			case "pmu":
+				imxrtpmu(p)
 			case "usb":
 				imxrtusb(p)
+			case "usb_analog":
+				imxrtusbanalog(p)
 			case "usbphy":
 				imxrtusbphy(p)
 			case "wdog":
 				imxrtwdog(p)
-			case "aoi", "lcdif", "usb_analog", "tmr", "enet", "tsc", "pxp", "pmu", "nvic":
+			case "aoi", "lcdif", "tmr", "enet", "tsc", "pxp", "nvic":
 				p.Insts = nil
 			}
 		}
@@ -389,6 +393,50 @@ func imxrtlpuart(p *Periph) {
 	}
 }
 
+func imxrtpmu(p *Periph) {
+	for _, r := range p.Regs {
+		if strings.HasPrefix(r.Name, "REG_") && strings.IndexByte(r.Name, 'P') > 0 {
+			r.Type = "REG"
+			if r.Name == "REG_1P1" {
+				for _, bf := range r.Bits {
+					switch bf.Name {
+					case "OUTPUT_TRG":
+						bf.Values = nil
+					case "ENABLE_WEAK_LINREG":
+						bf.Descr = "Enables the weak 1p1 or 2p5 regulator"
+					}
+				}
+			} else {
+				r.Bits = nil
+			}
+			continue
+		}
+		if strings.HasSuffix(r.Name, "_SET") || strings.HasSuffix(r.Name, "_CLR") || strings.HasSuffix(r.Name, "_TOG") {
+			r.Type = r.Name[:len(r.Name)-4]
+			r.Bits = nil
+			continue
+		}
+		switch r.Name {
+		case "MISC1":
+			for _, bf := range r.Bits {
+				if strings.HasPrefix(bf.Name, "LVDS") {
+					for _, v := range bf.Values {
+						v.Name = bf.Name[:6] + v.Name
+					}
+				}
+			}
+		case "MISC2":
+			for _, bf := range r.Bits {
+				if strings.HasSuffix(bf.Name, "_STEP_TIME") {
+					for _, v := range bf.Values {
+						v.Name = bf.Name + "_" + v.Name
+					}
+				}
+			}
+		}
+	}
+}
+
 func imxrtusb(p *Periph) {
 	var gpt, epc *Reg
 	for i, r := range p.Regs {
@@ -429,6 +477,33 @@ func imxrtusb(p *Periph) {
 				}
 			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX":
 				r.Bits = nil
+			}
+		}
+	}
+}
+
+func imxrtusbanalog(p *Periph) {
+	for _, r := range p.Regs {
+		if strings.HasPrefix(r.Name, "USB") {
+			r.Type = r.Name[5:]
+		}
+		if strings.HasSuffix(r.Name, "_SET") || strings.HasSuffix(r.Name, "_CLR") || strings.HasSuffix(r.Name, "_TOG") {
+			r.Type = r.Type[:len(r.Type)-4]
+			r.Bits = nil
+			continue
+		}
+		if strings.HasPrefix(r.Name, "USB2_") {
+			r.Bits = nil
+			continue
+		}
+		switch r.Name {
+		case "USB1_VBUS_DETECT":
+			for _, bf := range r.Bits {
+				if bf.Name == "VBUSVALID_THRESH" {
+					for _, v := range bf.Values {
+						v.Name = "VBUS_" + v.Name
+					}
+				}
 			}
 		}
 	}
