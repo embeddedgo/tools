@@ -1,4 +1,4 @@
-// Copyright 2019 Michal Derkacz. All rights reserved.
+// Copyright 2022 Michal Derkacz. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -28,6 +28,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtiomuxc(p)
 			case "lpuart":
 				imxrtlpuart(p)
+			case "ocotp":
+				imxrtocotp(p)
 			case "pmu":
 				imxrtpmu(p)
 			case "usb":
@@ -158,7 +160,7 @@ func imxrtiomuxc(p *Periph) {
 					bf.Name = r.Name[:len(r.Name)-12] + "DAISY"
 				}
 			}
-		case strings.HasSuffix(r.Name, "_SELECT_INPUT_0") || strings.HasSuffix(r.Name, "_SELECT_INPUT_1"):
+		case suffix(r.Name, "_SELECT_INPUT_0", "_SELECT_INPUT_1") >= 0:
 			for _, bf := range r.Bits {
 				if bf.Name == "DAISY" {
 					rn := r.Name
@@ -175,7 +177,7 @@ func imxrtccm(p *Periph) {
 		switch r.Name {
 		case "CSCMR1", "CSCMR2", "CS1CDR", "CS2CDR", "CDCDR", "CSCDR1", "CSCDR2":
 			for _, bf := range r.Bits {
-				if strings.HasSuffix(bf.Name, "_PODF") || strings.HasSuffix(bf.Name, "_PRED") {
+				if suffix(bf.Name, "_PODF", "_PRED") >= 0 {
 					for _, v := range bf.Values {
 						if strings.HasPrefix(v.Name, "DIVIDE_") {
 							v.Name = bf.Name + v.Name[6:]
@@ -230,7 +232,7 @@ func imxrtccmanalog(p *Periph) {
 			} else {
 				r.Bits = nil
 			}
-		case strings.HasPrefix(r.Name, "PLL_AUDIO"), strings.HasPrefix(r.Name, "PLL_VIDEO"):
+		case prefix(r.Name, "PLL_AUDIO", "PLL_VIDEO") >= 0:
 			r.Type = "PLL_AV"
 			if firstAV {
 				firstAV = false
@@ -393,6 +395,57 @@ func imxrtlpuart(p *Periph) {
 	}
 }
 
+func imxrtocotp(p *Periph) {
+	rmap := make(map[string]*Reg)
+	for i, r := range p.Regs {
+		if n := suffix(r.Name, "_SET", "_CLR", "_TOG"); n >= 0 {
+			r.Type = r.Name[:len(r.Name)-n]
+			r.Bits = nil
+			continue
+		}
+		if n := prefix(r.Name, "CFG", "MEM", "ANA", "OTPMK", "SRK", "SJC_RESP", "MAC", "GP3", "GP4", "SW_GP2", "MISC_CONF", "ROM_PATCH"); n >= 0 {
+			if d := r.Name[n]; isdigit(d) {
+				r.Bits = nil
+				typ := r.Name[:n]
+				if d == '0' {
+					r.Len = 1
+					r.Name = typ
+					rmap[typ] = r
+				} else {
+					rmap[typ].Len++
+					p.Regs[i] = nil
+				}
+				continue
+			}
+		}
+		switch r.Name {
+		case "DATA", "READ_FUSE_DATA", "CRC_VALUE", "OTPMK_CRC32", "GP1", "GP2", "SW_GP1", "SRK_REVOKE":
+			r.Bits = nil
+			continue
+		case "SCS":
+			for _, bf := range r.Bits {
+				if bf.Name == "LOCK" {
+					bf.Name = "LCK"
+				}
+			}
+		case "LOCK":
+			for _, bf := range r.Bits {
+				if strings.HasSuffix(bf.Name, "LOCK") {
+					bf.Name = bf.Name[:len(bf.Name)-4]
+				}
+				bf.Name += "_LCK"
+			}
+		case "CRC_ADDR":
+			for _, bf := range r.Bits {
+				if bf.Name == "CRC_ADDR" {
+					bf.Name = "ADDR_CRC"
+				}
+			}
+		}
+		renameReserved(r.Bits)
+	}
+}
+
 func imxrtpmu(p *Periph) {
 	for _, r := range p.Regs {
 		if strings.HasPrefix(r.Name, "REG_") && strings.IndexByte(r.Name, 'P') > 0 {
@@ -411,8 +464,8 @@ func imxrtpmu(p *Periph) {
 			}
 			continue
 		}
-		if strings.HasSuffix(r.Name, "_SET") || strings.HasSuffix(r.Name, "_CLR") || strings.HasSuffix(r.Name, "_TOG") {
-			r.Type = r.Name[:len(r.Name)-4]
+		if n := suffix(r.Name, "_SET", "_CLR", "_TOG"); n >= 0 {
+			r.Type = r.Name[:len(r.Name)-n]
 			r.Bits = nil
 			continue
 		}
@@ -487,8 +540,8 @@ func imxrtusbanalog(p *Periph) {
 		if strings.HasPrefix(r.Name, "USB") {
 			r.Type = r.Name[5:]
 		}
-		if strings.HasSuffix(r.Name, "_SET") || strings.HasSuffix(r.Name, "_CLR") || strings.HasSuffix(r.Name, "_TOG") {
-			r.Type = r.Type[:len(r.Type)-4]
+		if n := suffix(r.Name, "_SET", "_CLR", "_TOG"); n >= 0 {
+			r.Type = r.Type[:len(r.Type)-n]
 			r.Bits = nil
 			continue
 		}
@@ -537,11 +590,7 @@ func imxrtusbphy(p *Periph) {
 				}
 			}
 		}
-		for _, bf := range r.Bits {
-			if strings.HasPrefix(bf.Name, "RSVD") {
-				bf.Name = "_"
-			}
-		}
+		renameReserved(r.Bits)
 	}
 }
 
@@ -549,6 +598,14 @@ func imxrtwdog(p *Periph) {
 	for _, r := range p.Regs {
 		if r.Name == "WSR" {
 			r.Bits = nil
+		}
+	}
+}
+
+func renameReserved(bits []*BitField) {
+	for _, bf := range bits {
+		if strings.HasPrefix(bf.Name, "RSVD") || strings.HasPrefix(bf.Name, "RSRVD") {
+			bf.Name = "_"
 		}
 	}
 }

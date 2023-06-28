@@ -127,6 +127,24 @@ func fixSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-func isdigit(b byte) bool {
-	return unicode.IsDigit(rune(b))
+func isdigit(c byte) bool {
+	return uint(int(c)-'0') <= 9
+}
+
+func prefix(s string, prefixes ...string) int {
+	for _, p := range prefixes {
+		if strings.HasPrefix(s, p) {
+			return len(p)
+		}
+	}
+	return -1
+}
+
+func suffix(s string, suffixes ...string) int {
+	for _, p := range suffixes {
+		if strings.HasSuffix(s, p) {
+			return len(p)
+		}
+	}
+	return -1
 }
