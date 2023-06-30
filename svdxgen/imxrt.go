@@ -528,7 +528,7 @@ func imxrtusb(p *Periph) {
 				for _, bf := range r.Bits {
 					bf.Name = "DP" + bf.Name
 				}
-			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX":
+			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX", "PERIODICLISTBASE", "ASYNCLISTADDR", "ENDPTLISTADDR":
 				r.Bits = nil
 			}
 		}
