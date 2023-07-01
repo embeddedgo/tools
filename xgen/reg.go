@@ -129,9 +129,10 @@ loop:
 		}
 		offset, err := strconv.ParseUint(offstr, 0, 64)
 		if err != nil {
-			fdie(f, "bad offset %s: %v", offstr, err)
-		} else if offset&uint64(size-1) != 0 {
-			fdie(f, "bad offset %s for %s-bit register", offstr, sizstr)
+			fdie(f, "%s: bad offset %s: %v", name, offstr, err)
+		}
+		if offset&uint64(size-1) != 0 || offset < nextoff {
+			fdie(f, "%s: bad offset %s for %s-bit register", name, offstr, sizstr)
 		}
 		for offset > nextoff {
 			siz := 4
