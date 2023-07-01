@@ -528,8 +528,19 @@ func imxrtusb(p *Periph) {
 				for _, bf := range r.Bits {
 					bf.Name = "DP" + bf.Name
 				}
-			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX", "PERIODICLISTBASE", "ASYNCLISTADDR", "ENDPTLISTADDR":
+			case "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX", "DEVICEADDR", "ASYNCLISTADDR":
 				r.Bits = nil
+				switch r.Name {
+				case "DEVICEADDR":
+					r.Name = "DEVADDR_PLISTBASE"
+					r.Descr = "Device Address / Frame List Base Address"
+				case "ASYNCLISTADDR":
+					r.Name = "ASYNC_ENDPTLISTADDR"
+					r.Descr = "Next Asynch. Address / Endpoint List Address"
+				}
+			case "PERIODICLISTBASE", "ENDPTLISTADDR":
+				p.Regs[i] = nil
+
 			}
 		}
 	}
