@@ -508,16 +508,20 @@ func imxrtusb(p *Periph) {
 			p.Regs[i] = nil
 		case strings.HasPrefix(r.Name, "GPTIMER"):
 			p.Regs[i] = nil
-		case r.Name == "ENDPTCTRL0":
-			p.Regs[i] = nil
-		case r.Name == "ENDPTCTRL1":
-			epc = r
-			epc.Name = "ENDPTCTRL"
-			epc.Descr = "Endpoint Control"
-			epc.Len = 2
 		case strings.HasPrefix(r.Name, "ENDPTCTRL"):
-			epc.Len++
-			p.Regs[i] = nil
+			switch r.Name {
+			case "ENDPTCTRL0":
+				p.Regs[i] = nil
+			case "ENDPTCTRL1":
+				epc = r
+				epc.Name = "ENDPTCTRL"
+				epc.Descr = "Endpoint Control"
+				epc.Len = 2
+				epc.Offset -= 4
+			default:
+				epc.Len++
+				p.Regs[i] = nil
+			}
 		default:
 			switch r.Name {
 			case "HCCPARAMS":
