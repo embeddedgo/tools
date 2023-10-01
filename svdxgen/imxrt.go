@@ -532,6 +532,12 @@ func imxrtusb(p *Periph) {
 				for _, bf := range r.Bits {
 					bf.Name = "DP" + bf.Name
 				}
+			case "USBCMD":
+				for _, bf := range r.Bits {
+					if bf.Name == "ATDTW" {
+						bf.LSL = 14
+					}
+				}
 			case "ENDPTFLUSH", "ENDPTSTAT", "ENDPTCOMPLETE", "ENDPTNAK", "ENDPTNAKEN", "ENDPTPRIME", "ENDPTSETUPSTAT", "ID", "CAPLENGTH", "HCIVERSION", "DCIVERSION", "FRINDEX", "DEVICEADDR", "ASYNCLISTADDR":
 				r.Bits = nil
 				switch r.Name {
