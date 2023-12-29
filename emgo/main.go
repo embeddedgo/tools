@@ -171,10 +171,10 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 		dieErr(os.WriteFile(isrFile, buf, 0666))
 	}
 
-	var tags, ldflags, o string
+	var tags, ldflags, elf string
 	flag.StringVar(&tags, "tags", "", "")
 	flag.StringVar(&ldflags, "ldflags", "", "")
-	flag.StringVar(&o, "o", "", "")
+	flag.StringVar(&elf, "o", "", "")
 	flag.Parse()
 	if tags != "" {
 		tags += ","
@@ -190,43 +190,46 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	if cfg["GOSTRIPFN"] != "" {
 		ldflags += " -stripfn " + cfg["GOSTRIPFN"]
 	}
-	if o == "" {
-		o = filepath.Base(workDir + ".elf")
+	if elf == "" {
+		elf = filepath.Base(workDir + ".elf")
 	}
 	cmd.Args = append(
-		[]string{cmd.Args[0], "build", "-tags", tags, "-ldflags", ldflags, "-o", o},
+		[]string{cmd.Args[0], "build", "-tags", tags, "-ldflags", ldflags, "-o", elf},
 		flag.Args()[1:]...,
 	)
 	if cmd.Run() != nil {
 		os.Exit(1)
 	}
 
-	obj := strings.TrimSuffix(o, ".elf")
+	obj := strings.TrimSuffix(elf, ".elf")
 	os.Remove(isrFile)
 	os.Remove(obj + ".hex")
 	os.Remove(obj + "-settings.hex")
 	os.Remove(obj + ".bin")
 
 	if cfg["GOOUT"] != "" {
-		objcopy, err := exec.LookPath("objcopy")
-		dieErr(err)
-		cmd = &exec.Cmd{
-			Path:   objcopy,
-			Stdin:  os.Stdin,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-		}
-		switch cfg["GOOUT"] {
-		case "hex":
-			cmd.Args = []string{objcopy, "-O", "ihex", o, obj + ".hex"}
-		case "bin":
-			cmd.Args = []string{objcopy, "-O", "binary", o, obj + ".bin"}
-		default:
-			die("unknown GOOUT: \"%s\"\n", cfg["GOOUT"])
-		}
-		if cmd.Run() != nil {
-			os.Exit(1)
-		}
+		objcopy(elf, obj, cfg["GOOUT"])
+		/*
+			objcopy, err := exec.LookPath("objcopy")
+			dieErr(err)
+			cmd = &exec.Cmd{
+				Path:   objcopy,
+				Stdin:  os.Stdin,
+				Stdout: os.Stdout,
+				Stderr: os.Stderr,
+			}
+			switch cfg["GOOUT"] {
+			case "hex":
+				cmd.Args = []string{objcopy, "-O", "ihex", elf, obj + ".hex"}
+			case "bin":
+				cmd.Args = []string{objcopy, "-O", "binary", elf, obj + ".bin"}
+			default:
+				die("unknown GOOUT: \"%s\"\n", cfg["GOOUT"])
+			}
+			if cmd.Run() != nil {
+				os.Exit(1)
+			}
+		*/
 	}
 
 	os.Exit(0)
@@ -267,6 +270,7 @@ func main() {
 		"GOTEXT":    os.Getenv("GOTEXT"),
 		"GOMEM":     os.Getenv("GOMEM"),
 		"GOOUT":     os.Getenv("GOOUT"),
+		"GOINCBIN":  os.Getenv("GOINCBIN"),
 		"GOSTRIPFN": os.Getenv("GOSTRIPFN"),
 		"ISRNAMES":  os.Getenv("ISRNAMES"),
 	}
