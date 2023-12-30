@@ -208,28 +208,7 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	os.Remove(obj + ".bin")
 
 	if cfg["GOOUT"] != "" {
-		objcopy(elf, obj, cfg["GOOUT"])
-		/*
-			objcopy, err := exec.LookPath("objcopy")
-			dieErr(err)
-			cmd = &exec.Cmd{
-				Path:   objcopy,
-				Stdin:  os.Stdin,
-				Stdout: os.Stdout,
-				Stderr: os.Stderr,
-			}
-			switch cfg["GOOUT"] {
-			case "hex":
-				cmd.Args = []string{objcopy, "-O", "ihex", elf, obj + ".hex"}
-			case "bin":
-				cmd.Args = []string{objcopy, "-O", "binary", elf, obj + ".bin"}
-			default:
-				die("unknown GOOUT: \"%s\"\n", cfg["GOOUT"])
-			}
-			if cmd.Run() != nil {
-				os.Exit(1)
-			}
-		*/
+		objcopy(elf, obj, cfg["GOOUT"], cfg["GOINCBIN"])
 	}
 
 	os.Exit(0)
