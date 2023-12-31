@@ -34,13 +34,16 @@ func includeBins(sections []*section, incbin string) []*section {
 			die("objcopy: bad address in '%s': %s\n", addr, err)
 		}
 		s.data, err = os.ReadFile(bin)
-		if err == nil {
-			continue
-		}
-		if errors.Is(err, fs.ErrNotExist) && filepath.Dir(bin) == "." {
+		if err != nil && errors.Is(err, fs.ErrNotExist) && filepath.Dir(bin) == "." {
 			s.data, err = os.ReadFile(filepath.Join("..", bin))
 		}
-		dieErr(err)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				die("objdump: cannot find %s in . or ..\n", bin)
+			} else {
+				dieErr(err)
+			}
+		}
 		first, last := sections[0], sections[len(sections)-1]
 		if o := int64(first.addr - s.addr); o >= int64(len(s.data)) {
 			s.offset = first.offset - o
