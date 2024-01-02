@@ -28,6 +28,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtiomuxc(p)
 			case "lpuart":
 				imxrtlpuart(p)
+			case "lpspi":
+				imxrtlpspi(p)
 			case "ocotp":
 				imxrtocotp(p)
 			case "pmu":
@@ -374,6 +376,15 @@ func imxrtdma(p *Periph) {
 			}
 		case "SEEI", "CERQ", "SERQ", "CDNE", "SSRT", "CERR", "CINT":
 			r.Type = "CTRL"
+			r.Bits = nil
+		}
+	}
+}
+
+func imxrtlpspi(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "DMR0", "DMR1", "TDR", "RDR":
 			r.Bits = nil
 		}
 	}
