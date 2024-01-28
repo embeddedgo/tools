@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"math/bits"
 	"strings"
 )
@@ -386,6 +387,66 @@ func imxrtlpspi(p *Periph) {
 		switch r.Name {
 		case "DMR0", "DMR1", "TDR", "RDR":
 			r.Bits = nil
+		case "CFGR1":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "PCSPOL":
+					bf.Values = []*BitFieldValue{
+						{"PCS0H", "PCS0 pin is active high", 1 << 0},
+						{"PCS1H", "PCS1 pin is active high", 1 << 1},
+						{"PCS2H", "PCS2 pin is active high", 1 << 2},
+						{"PCS3H", "PCS3 pin is active high", 1 << 3},
+					}
+				case "MATCFG":
+					bf.Values = []*BitFieldValue{
+						{"MATDIS", "Match is disabled", 0},
+						{"MAT0", "Match if data[0]==MATCH0 || data[0]==MATCH1", 2},
+						{"MATX", "Match if data[x]==MATCH0 || data[x]==MATCH1", 3},
+						{"MAT02", "Match if data[0:2] == {MATCH0, MATCH1}", 4},
+						{"MATX2", "Match if data[x:x+2] == {MATCH0, MATCH1}", 5},
+						{"MAT0M", "Match if data[0]&MATCH1 == MATCH0&MATCH1", 6},
+						{"MATXM", "Match if data[x]&MATCH1 == MATCH0&MATCH1", 7},
+					}
+				case "PINCFG":
+					bf.Values = []*BitFieldValue{
+						{"FD", "SIN=Rx, SOUT=Tx in full-duplex mode", 0},
+						{"HDSIN", "1-bit half-duplex on SIN", 1},
+						{"HDSOUT", "1-bit half-duplex on SOUT", 2},
+						{"FDSWAP", "SIN=Tx, SOUT=Rx in full-duplex mode", 3},
+					}
+				case "PCSCFG":
+					bf.Name = "PCSDATA"
+					bf.Descr = "Use PCS[3:2] as DATA[3:2] for 4-bit half-duplex mode"
+				}
+			}
+		case "TCR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "WIDTH":
+					for _, v := range bf.Values {
+						v.Name = strings.Replace(v.Name, "_", "", 1)
+					}
+				case "PCS":
+					bf.Name = "TPCS"
+					for _, v := range bf.Values {
+						v.Name = "T" + strings.Replace(v.Name, "_", "", 1)
+					}
+				case "PRESCALE":
+					for _, v := range bf.Values {
+						v.Name = fmt.Sprintf("PREDIV%d", 1<<v.Value)
+					}
+				case "CPHA":
+					bf.Values = []*BitFieldValue{
+						{"CPHA0", "Capture data on the leading and change on the following edge of SCK", 0},
+						{"CPHA1", "Change data on the leading and capture on the following edge of SCK", 1},
+					}
+				case "CPOL":
+					bf.Values = []*BitFieldValue{
+						{"CPOL0", "The inactive state value of SCK is low", 0},
+						{"CPOL1", "The inactive state value of SCK is high", 1},
+					}
+				}
+			}
 		}
 	}
 }
