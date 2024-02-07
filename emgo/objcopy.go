@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"debug/elf"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -58,6 +60,16 @@ func includeBins(sections []*section, incbin string) []*section {
 	return sections
 }
 
+func padBytes(cache *[]byte, n int, b byte) []byte {
+	if len(*cache) < n {
+		*cache = make([]byte, n)
+		for i := range *cache {
+			(*cache)[i] = b
+		}
+	}
+	return (*cache)[:n]
+}
+
 func objcopy(elfFile, obj, format, incbin string) {
 	r, err := os.Open(elfFile)
 	dieErr(err)
@@ -98,10 +110,16 @@ func objcopy(elfFile, obj, format, incbin string) {
 		sections = includeBins(sections, incbin)
 	}
 	switch format {
-	case "bin":
-		w, err := os.Create(obj + ".bin")
-		dieErr(err)
-		defer w.Close()
+	case "bin", "z64":
+		var w io.Writer
+		if format == "z64" {
+			w = bytes.NewBuffer(make([]byte, n64ChecksumLen))
+		} else {
+			f, err := os.Create(obj + "." + format)
+			dieErr(err)
+			defer f.Close()
+			w = f
+		}
 		var ones []byte
 		for i, s := range sections {
 			_, err = w.Write(s.data)
@@ -113,14 +131,16 @@ func objcopy(elfFile, obj, format, incbin string) {
 			if pad == 0 {
 				continue
 			}
-			if len(ones) < pad {
-				ones = make([]byte, pad)
-				for i := range ones {
-					ones[i] = 0xff
-				}
-			}
-			_, err = w.Write(ones[:pad])
+			_, err = w.Write(padBytes(&ones, pad, 1))
 			dieErr(err)
+		}
+		if format == "z64" {
+			buf := w.(*bytes.Buffer)
+			pad := n64ChecksumLen - buf.Len()
+			if pad > 0 {
+				buf.Write(padBytes(&ones, pad, 1))
+			}
+			//crc := n64CRC(buf.Bytes())
 		}
 	case "hex":
 		w, err := os.Create(obj + ".hex")
