@@ -146,7 +146,7 @@ func objcopy(elfFile, obj, format, incbin string) {
 		for _, s := range sections {
 			mem.AddBinary(uint32(s.addr), s.data)
 		}
-		mem.DumpIntelHex(w, 16)
+		dieErr(mem.DumpIntelHex(w, 16))
 	default:
 		die("objcopy: unknown format: %s\n", format)
 	}
