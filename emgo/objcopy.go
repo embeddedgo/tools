@@ -60,6 +60,8 @@ func includeBins(sections []*section, incbin string) []*section {
 	return sections
 }
 
+var ones []byte
+
 func padBytes(cache *[]byte, n int, b byte) []byte {
 	if len(*cache) < n {
 		*cache = make([]byte, n)
@@ -115,12 +117,11 @@ func objcopy(elfFile, obj, format, incbin string) {
 		if format == "z64" {
 			w = bytes.NewBuffer(make([]byte, n64ChecksumLen))
 		} else {
-			f, err := os.Create(obj + "." + format)
+			f, err := os.Create(obj + ".bin")
 			dieErr(err)
 			defer f.Close()
 			w = f
 		}
-		var ones []byte
 		for i, s := range sections {
 			_, err = w.Write(s.data)
 			dieErr(err)
@@ -135,12 +136,7 @@ func objcopy(elfFile, obj, format, incbin string) {
 			dieErr(err)
 		}
 		if format == "z64" {
-			buf := w.(*bytes.Buffer)
-			pad := n64ChecksumLen - buf.Len()
-			if pad > 0 {
-				buf.Write(padBytes(&ones, pad, 1))
-			}
-			//crc := n64CRC(buf.Bytes())
+			n64WriteROMFile(obj, w.(*bytes.Buffer))
 		}
 	case "hex":
 		w, err := os.Create(obj + ".hex")

@@ -4,9 +4,16 @@
 
 package main
 
+import (
+	"bytes"
+	"encoding/binary"
+	"io"
+	"os"
+)
+
 // https://n64brew.dev/wiki/ROM_Header
 var n64Header = [0x40]byte{
-	0x00: 0x80, 0x37, 0x12, 0x49, // PI BSD DOM1 Configuration Flags
+	0x00: 0x80, 0x37, 0x12, 0x40, // PI BSD DOM1 Configuration Flags
 	0x04: 0x00, 0x00, 0x00, 0x0f, // Clock Rate
 	0x08: 0x80, 0x00, 0x04, 0x00, // Boot Address
 	0x0c: 0x00, 0x00, 0x14, 0x4c, // Libultra Version
@@ -14,7 +21,7 @@ var n64Header = [0x40]byte{
 	//0x18: Reserved (8 bytes)
 	//0x20: Game Title (20 bytes)
 	//0x34: Reserved (7 bytes)
-	0x3b: 'N',      // Category Code (N = Game Pak),
+	0x3b: 'N',      // Category Code ('N' = 0x4e = "Game Pak"),
 	0x3c: ' ', ' ', // Unique Code
 	0x3e: ' ', // Destination Code
 	0x3f: 0,   // ROM Version
@@ -26,10 +33,6 @@ const n64ChecksumLen = 1024 * 1024
 // the n64chain:
 //
 // https://github.com/tj90241/n64chain
-//
-// The original code probably contains a BUG because it assumes len(buf) >=
-// CHECKSUM_LENGTH (1 MiB). This translation allows len(buf) < CHECKSUM_LENGTH
-// but there is a problem when len(buf) isn't a multiple of 4.
 //
 // The original copyright notes from the tools/checksum.c file:
 //
@@ -48,8 +51,7 @@ func n64CRC(buf []byte) (crc [2]uint32) {
 	t6 := CIC_NUS6102_SEED
 
 	for i := 0; i < len(buf); i += 4 {
-		c1 := uint32(buf[i])<<24 | uint32(buf[i+1])<<16 |
-			uint32(buf[i+2])<<8 | uint32(buf[i+3])
+		c1 := binary.BigEndian.Uint32(buf[i:])
 		k1 := t6 + c1
 		if k1 < t6 {
 			t4++
@@ -71,6 +73,40 @@ func n64CRC(buf []byte) (crc [2]uint32) {
 	crc[1] = t5 ^ t2 ^ t1
 	return
 }
+
+func n64WriteROMFile(obj string, buf *bytes.Buffer) {
+	pad := n64ChecksumLen - buf.Len()
+	if pad > 0 {
+		buf.Write(padBytes(&ones, pad, 1))
+	}
+	crc := n64CRC(buf.Bytes()[:n64ChecksumLen])
+	binary.BigEndian.PutUint32(n64Header[0x10:], crc[0])
+	binary.BigEndian.PutUint32(n64Header[0x14:], crc[1])
+	copy(n64Header[0x20:0x34], obj) // Game Title
+	f, err := os.Create(obj + ".z64")
+	dieErr(err)
+	defer f.Close()
+	_, err = f.Write(n64Header[:])
+	dieErr(err)
+	_, err = io.WriteString(f, n64IPL3)
+	dieErr(err)
+	_, err = f.Write(buf.Bytes())
+	dieErr(err)
+}
+
+/*
+func main() {
+	buf, err := os.ReadFile("test_file.z64")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	buf = buf[0x1000:]
+	buf = buf[:n64ChecksumLen]
+	crc := n64CRC(buf)
+	fmt.Printf("%x %x\n", crc[0], crc[1])
+}
+*/
 
 // 6102/7101 MD5=e24dd796b2fa16511521139d28c8356b
 const n64IPL3 = "" +
@@ -326,15 +362,3 @@ const n64IPL3 = "" +
 	"\x00\x00\x00\x00\x20\x01\x00\x07\x00\xc6\x08\x08\x80\x24\x31\x42" +
 	"\x4a\x22\x51\x22\x89\x22\x36\x10\x02\x40\x21\x86\x03\xc0\x00\x00" +
 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-
-	/*
-	   func main() {
-	   	buf, err := os.ReadFile("test_file")
-	   	if err != nil {
-	   		fmt.Println(err)
-	   		return
-	   	}
-	   	crc := n64CRC(buf)
-	   	fmt.Printf("%x %x\n", crc[0], crc[1])
-	   }
-	*/
