@@ -115,7 +115,7 @@ func objcopy(elfFile, obj, format, incbin string) {
 	case "bin", "z64":
 		var w io.Writer
 		if format == "z64" {
-			w = bytes.NewBuffer(make([]byte, n64ChecksumLen))
+			w = bytes.NewBuffer(make([]byte, 0, n64ChecksumLen))
 		} else {
 			f, err := os.Create(obj + ".bin")
 			dieErr(err)
@@ -132,7 +132,7 @@ func objcopy(elfFile, obj, format, incbin string) {
 			if pad == 0 {
 				continue
 			}
-			_, err = w.Write(padBytes(&ones, pad, 1))
+			_, err = w.Write(padBytes(&ones, pad, 0xff))
 			dieErr(err)
 		}
 		if format == "z64" {

@@ -16,7 +16,7 @@ var n64Header = [0x40]byte{
 	0x00: 0x80, 0x37, 0x12, 0x40, // PI BSD DOM1 Configuration Flags
 	0x04: 0x00, 0x00, 0x00, 0x0f, // Clock Rate
 	0x08: 0x80, 0x00, 0x04, 0x00, // Boot Address
-	0x0c: 0x00, 0x00, 0x14, 0x4c, // Libultra Version
+	0x0c: 0x00, 0x00, 0x14, 0x44, // Libultra Version
 	//0x10: Check Code (8 bytes)
 	//0x18: Reserved (8 bytes)
 	//0x20: Game Title (20 bytes)
@@ -77,7 +77,7 @@ func n64CRC(buf []byte) (crc [2]uint32) {
 func n64WriteROMFile(obj string, buf *bytes.Buffer) {
 	pad := n64ChecksumLen - buf.Len()
 	if pad > 0 {
-		buf.Write(padBytes(&ones, pad, 1))
+		buf.Write(padBytes(&ones, pad, 0xff))
 	}
 	crc := n64CRC(buf.Bytes()[:n64ChecksumLen])
 	binary.BigEndian.PutUint32(n64Header[0x10:], crc[0])
