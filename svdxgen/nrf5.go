@@ -175,7 +175,7 @@ func nrf5gpio(p *Periph) {
 }
 
 func nrf5nvmc(p *Periph) {
-	for _, r := range p.Regs {
+	for i, r := range p.Regs {
 		switch r.Name {
 		case "READY", "READYNEXT", "ERASEALL", "ERASEUICR":
 			r.Bits = nil
@@ -183,6 +183,8 @@ func nrf5nvmc(p *Periph) {
 			for _, b := range r.Bits {
 				b.Values = nil
 			}
+		case "ERASEPCR1":
+			p.Regs[i] = nil
 		}
 	}
 }
@@ -193,6 +195,9 @@ func nrf5ppi(p *Periph) {
 		if r.Name == "FORK" && len(r.SubRegs) == 1 {
 			r.Name += "_" + r.SubRegs[0].Name
 			r.SubRegs = nil
+		}
+		for _, sr := range r.SubRegs {
+			sr.Bits = nil
 		}
 	}
 }
