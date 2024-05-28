@@ -104,7 +104,9 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	if !ok {
 		die("unknow GOTARGET: \"%s\"\n", gotarget)
 	}
-	cfg["GOARCH"] = def.GOARCH
+	if cfg["GOARCH"] == "" {
+		cfg["GOARCH"] = def.GOARCH
+	}
 	if cfg["GOARM"] == "" {
 		cfg["GOARM"] = def.GOARM
 	}
@@ -244,6 +246,7 @@ func main() {
 	// Initialize all known variables from environment.
 	cfg := map[string]string{
 		"GOOS":      os.Getenv("GOOS"),
+		"GOARCH":    os.Getenv("GOARCH"),
 		"GOTARGET":  os.Getenv("GOTARGET"),
 		"GOARM":     os.Getenv("GOARM"),
 		"GOTEXT":    os.Getenv("GOTEXT"),
@@ -279,6 +282,7 @@ var defaults = map[string]struct{ GOARCH, GOARM, ISRNAMES string }{
 	"imxrt1060": {"thumb", "7,hardfloat", "imxrt/hal/irq"},
 	"k210":      {"riscv64", "", "kendryte/hal/irq"},
 	"n64":       {"mips64", "", ""},
+	"noostest":  {},
 	"nrf52840":  {"thumb", "7,softfloat", "nrf5/hal/irq"},
 	"stm32f215": {"thumb", "7,softfloat", "stm32/hal/irq"},
 	"stm32f407": {"thumb", "7,softfloat", "stm32/hal/irq"},
