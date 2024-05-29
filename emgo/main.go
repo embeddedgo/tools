@@ -45,7 +45,7 @@ func dieErr(err error) {
 	}
 }
 
-func updateFromFile(cfg map[string]string) {
+func updateCfgFromFile(cfg map[string]string) {
 	f, err := os.Open(cfgFile)
 	if err != nil {
 		f, err = os.Open(filepath.Join(filepath.Dir(workDir), cfgFile))
@@ -71,7 +71,7 @@ func updateFromFile(cfg map[string]string) {
 		}
 		name := strings.TrimSpace(line[:i])
 		val := strings.TrimSpace(line[i+1:])
-		if _, ok := cfg[name]; !ok {
+		if _, ok := cfg[name]; !ok && name != "DISABLE" {
 			die("%s:%d: unknown name \"%s\"\n", f.Name(), ln, name)
 		}
 		cfg[name] = val
@@ -120,8 +120,13 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	}
 
 	// Check mandatory variables
-	if cfg["GOTARGET"] != "k210" && cfg["GOTEXT"] == "" {
-		die("GOTEXT variable is not set\n")
+	if cfg["GOTEXT"] == "" {
+		switch cfg["GOTARGET"] {
+		case "k210", "noostest":
+			// GOTEXT may be empty
+		default:
+			die("GOTEXT variable is not set\n")
+		}
 	}
 	if cfg["GOMEM"] == "" {
 		die("GOMEM variable is not set\n")
@@ -216,6 +221,21 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	os.Exit(0)
 }
 
+func cfgFromEnv() map[string]string {
+	return map[string]string{
+		"GOOS":      os.Getenv("GOOS"),
+		"GOARCH":    os.Getenv("GOARCH"),
+		"GOTARGET":  os.Getenv("GOTARGET"),
+		"GOARM":     os.Getenv("GOARM"),
+		"GOTEXT":    os.Getenv("GOTEXT"),
+		"GOMEM":     os.Getenv("GOMEM"),
+		"GOOUT":     os.Getenv("GOOUT"),
+		"GOINCBIN":  os.Getenv("GOINCBIN"),
+		"GOSTRIPFN": os.Getenv("GOSTRIPFN"),
+		"ISRNAMES":  os.Getenv("ISRNAMES"),
+	}
+}
+
 func main() {
 	// Check if there is a local go tree next to the emgo executable.
 	path, err := os.Executable()
@@ -243,26 +263,27 @@ func main() {
 		Stderr: os.Stderr,
 	}
 
-	// Initialize all known variables from environment.
-	cfg := map[string]string{
-		"GOOS":      os.Getenv("GOOS"),
-		"GOARCH":    os.Getenv("GOARCH"),
-		"GOTARGET":  os.Getenv("GOTARGET"),
-		"GOARM":     os.Getenv("GOARM"),
-		"GOTEXT":    os.Getenv("GOTEXT"),
-		"GOMEM":     os.Getenv("GOMEM"),
-		"GOOUT":     os.Getenv("GOOUT"),
-		"GOINCBIN":  os.Getenv("GOINCBIN"),
-		"GOSTRIPFN": os.Getenv("GOSTRIPFN"),
-		"ISRNAMES":  os.Getenv("ISRNAMES"),
-	}
-
 	workDir, err = os.Getwd()
 	dieErr(err)
 
-	// Update variables from build.cfg file in current working directory or
+	// Initialize all known variables from environment.
+	cfg := cfgFromEnv()
+
+	// Update variables from build.cfg file in the current working directory or
 	// its parent directory.
-	updateFromFile(cfg)
+	updateCfgFromFile(cfg)
+
+	if reason, ok := cfg["DISABLE"]; ok {
+		cfg = cfgFromEnv()
+		if cfg["GOTARGET"] == "" {
+			fmt.Fprintln(os.Stderr, "The build.cfg file is disabled.")
+			if reason != "" {
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, reason)
+			}
+			os.Exit(1)
+		}
+	}
 
 	// GOOS defaults to noos if GOTARGET is set
 	if cfg["GOOS"] == "" && cfg["GOTARGET"] != "" {
