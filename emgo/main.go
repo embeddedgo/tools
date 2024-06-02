@@ -94,7 +94,7 @@ func gointerrupthandler() bool {
 	return false
 }
 
-func noos(cmd *exec.Cmd, cfg map[string]string) {
+func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 	// Infer GOARCH, GOARM, GOTEXT from GOTARGET
 	gotarget := cfg["GOTARGET"]
 	if gotarget == "" {
@@ -114,10 +114,6 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	dieErr(os.Setenv("GOOS", cfg["GOOS"]))
 	dieErr(os.Setenv("GOARCH", cfg["GOARCH"]))
 	dieErr(os.Setenv("GOARM", cfg["GOARM"]))
-
-	if len(os.Args) < 2 || os.Args[1] != "build" {
-		return
-	}
 
 	// Check mandatory variables
 	if cfg["GOTEXT"] == "" {
@@ -178,6 +174,8 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 		dieErr(os.WriteFile(isrFile, buf, 0666))
 	}
 
+	os.Args = os.Args[1:] // required by flag to parse flags after "build"
+
 	var tags, ldflags, elf string
 	flag.StringVar(&tags, "tags", "", "")
 	flag.StringVar(&ldflags, "ldflags", "", "")
@@ -202,7 +200,7 @@ func noos(cmd *exec.Cmd, cfg map[string]string) {
 	}
 	cmd.Args = append(
 		[]string{cmd.Args[0], "build", "-tags", tags, "-ldflags", ldflags, "-o", elf},
-		flag.Args()[1:]...,
+		flag.Args()...,
 	)
 	if cmd.Run() != nil {
 		os.Exit(1)
@@ -290,8 +288,8 @@ func main() {
 		cfg["GOOS"] = "noos"
 	}
 
-	if cfg["GOOS"] == "noos" {
-		noos(cmd, cfg)
+	if len(os.Args) >= 2 && os.Args[1] == "build" && cfg["GOOS"] == "noos" {
+		noosBuild(cmd, cfg)
 	}
 
 	if cmd.Run() != nil {
