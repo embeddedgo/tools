@@ -118,14 +118,21 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 	// Check mandatory variables
 	if cfg["GOTEXT"] == "" {
 		switch cfg["GOTARGET"] {
-		case "k210", "noostest":
-			// GOTEXT may be empty
+		case "k210":
+			// GOTEXT not used
+		case "noostest":
+			cfg["GOTEXT"] = noostest[cfg["GOARCH"]].GOTEXT // "" if not used
 		default:
 			die("GOTEXT variable is not set\n")
 		}
 	}
 	if cfg["GOMEM"] == "" {
-		die("GOMEM variable is not set\n")
+		if cfg["GOTARGET"] == "noostest" {
+			cfg["GOMEM"] = noostest[cfg["GOARCH"]].GOMEM
+		}
+		if cfg["GOMEM"] == "" {
+			die("GOMEM variable is not set\n")
+		}
 	}
 
 	// Generate zisrnames.go
@@ -308,4 +315,9 @@ var defaults = map[string]struct{ GOARCH, GOARM, ISRNAMES string }{
 	"stm32f412": {"thumb", "7,softfloat", "stm32/hal/irq"},
 	"stm32h7x3": {"thumb", "7,hardfloat", "stm32/hal/irq"},
 	"stm32l4x6": {"thumb", "7,softfloat", "stm32/hal/irq"},
+}
+
+var noostest = map[string]struct{ GOMEM, GOTEXT string }{
+	"thumb":   {"0x60000000:16M,0x20000000:4M", "0x00000000:4M"},
+	"riscv64": {"0x80000000:32M", ""},
 }
