@@ -182,7 +182,7 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 
 	// Get flags shared with the go command.
 	var (
-		tags, ldflags, elf string
+		tags, ldflags, out string
 		cut                *string
 		args               []string
 	)
@@ -198,7 +198,7 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 		case "-ldflags":
 			cut = &ldflags
 		case "-o":
-			cut = &elf
+			cut = &out
 		default:
 			args = append(args, a)
 		}
@@ -218,26 +218,28 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 	if cfg["GOSTRIPFN"] != "" {
 		ldflags += " -stripfn " + cfg["GOSTRIPFN"]
 	}
-	if elf == "" {
-		elf = filepath.Base(workDir + ".elf")
+	if out == "" {
+		out = filepath.Base(workDir) + ".elf"
 	}
-
-	cmd.Args = append(
-		[]string{cmd.Args[0], os.Args[1], "-tags", tags, "-ldflags", ldflags, "-o", elf},
-		args...,
-	)
+	cmd.Args = []string{cmd.Args[0], os.Args[1], "-tags", tags, "-ldflags", ldflags}
+	if os.Args[1] == "test" {
+		cmd.Args = append(cmd.Args, "-exec", "emgo")
+	} else {
+		cmd.Args = append(cmd.Args, "-o", out)
+	}
+	cmd.Args = append(cmd.Args, args...)
 	if cmd.Run() != nil {
 		os.Exit(1)
 	}
 
-	obj := strings.TrimSuffix(elf, ".elf")
+	obj := strings.TrimSuffix(out, ".elf")
 	os.Remove(isrFile)
 	os.Remove(obj + ".hex")
 	os.Remove(obj + "-settings.hex")
 	os.Remove(obj + ".bin")
 
 	if cfg["GOOUT"] != "" {
-		objcopy(elf, obj, cfg["GOOUT"], cfg["GOINCBIN"])
+		objcopy(out, obj, cfg["GOOUT"], cfg["GOINCBIN"])
 	}
 
 	os.Exit(0)
@@ -259,6 +261,13 @@ func cfgFromEnv() map[string]string {
 }
 
 func main() {
+	if len(os.Args) >= 2 {
+		if a1 := os.Args[1]; strings.HasSuffix(a1, ".test") || strings.HasSuffix(a1, ".elf") {
+			// Use an emulator to run ELF binary.
+			os.Exit(runELF(os.Args[1]))
+		}
+	}
+
 	// Check if there is a local go tree next to the emgo executable.
 	path, err := os.Executable()
 	dieErr(err)
