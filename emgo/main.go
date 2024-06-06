@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"flag"
 	"fmt"
 	"go/build"
 	"io/fs"
@@ -181,13 +180,30 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 		dieErr(os.WriteFile(isrFile, buf, 0666))
 	}
 
-	os.Args = os.Args[1:] // required by flag to parse flags after "build"
-
-	var tags, ldflags, elf string
-	flag.StringVar(&tags, "tags", "", "")
-	flag.StringVar(&ldflags, "ldflags", "", "")
-	flag.StringVar(&elf, "o", "", "")
-	flag.Parse()
+	// Get flags shared with the go command.
+	var (
+		tags, ldflags, elf string
+		cut                *string
+		args               []string
+	)
+	for _, a := range os.Args[2:] {
+		if cut != nil {
+			*cut = a
+			cut = nil
+			continue
+		}
+		switch a {
+		case "-tags":
+			cut = &tags
+		case "-ldflags":
+			cut = &ldflags
+		case "-o":
+			cut = &elf
+		default:
+			args = append(args, a)
+		}
+	}
+	// Append emgo configuration to the flags.
 	if tags != "" {
 		tags += ","
 	}
@@ -205,9 +221,10 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 	if elf == "" {
 		elf = filepath.Base(workDir + ".elf")
 	}
+
 	cmd.Args = append(
-		[]string{cmd.Args[0], "build", "-tags", tags, "-ldflags", ldflags, "-o", elf},
-		flag.Args()...,
+		[]string{cmd.Args[0], os.Args[1], "-tags", tags, "-ldflags", ldflags, "-o", elf},
+		args...,
 	)
 	if cmd.Run() != nil {
 		os.Exit(1)
@@ -295,8 +312,11 @@ func main() {
 		cfg["GOOS"] = "noos"
 	}
 
-	if len(os.Args) >= 2 && os.Args[1] == "build" && cfg["GOOS"] == "noos" {
-		noosBuild(cmd, cfg)
+	if len(os.Args) >= 2 && cfg["GOOS"] == "noos" {
+		switch os.Args[1] {
+		case "build", "test":
+			noosBuild(cmd, cfg)
+		}
 	}
 
 	if cmd.Run() != nil {
