@@ -10,13 +10,18 @@ import (
 	"os/exec"
 )
 
-func runELF(elfbin string) int {
+func runELF() int {
 	// TODO: use debug/buildinfo.ReadFile if it'll support buildinfo in RODATA
+	elfbin := os.Args[1]
 	f, err := elf.Open(elfbin)
 	dieErr(err)
 	h := f.FileHeader
 	f.Close()
 	var args []string
+	semiconf := "enable=on,target=native,userspace=on"
+	for _, a := range os.Args[1:] {
+		semiconf += ",arg=" + a
+	}
 	switch h.Machine {
 	case elf.EM_ARM:
 		if h.Entry&1 != 0 {
@@ -27,7 +32,7 @@ func runELF(elfbin string) int {
 				"-nographic",
 				"-monitor", "none",
 				"-serial", "none",
-				"--semihosting-config", "enable=on,target=native,userspace=on",
+				"--semihosting-config", semiconf,
 				"-kernel", elfbin,
 			}
 		}
@@ -42,7 +47,7 @@ func runELF(elfbin string) int {
 				"-nographic",
 				"-monitor", "none",
 				"-serial", "none",
-				"--semihosting-config", "enable=on,target=native,userspace=on",
+				"--semihosting-config", semiconf,
 				"-bios", elfbin,
 			}
 		}

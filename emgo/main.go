@@ -264,7 +264,7 @@ func main() {
 	if len(os.Args) >= 2 {
 		if a1 := os.Args[1]; strings.HasSuffix(a1, ".test") || strings.HasSuffix(a1, ".elf") {
 			// Use an emulator to run ELF binary.
-			os.Exit(runELF(os.Args[1]))
+			os.Exit(runELF())
 		}
 	}
 
