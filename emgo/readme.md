@@ -10,7 +10,7 @@ Emgo is a thin wrapper over go command. It has two main purposes:
 
 `GOOS` (default: "noos")
 
-`GOARCH` (set implicitly according to `GOTARGET`, cannot appear in `build.cfg`)
+`GOARCH` (set implicitly according to `GOTARGET`)
 
 `GOARM` (default value dependent on `GOTARGET`)
 
@@ -20,7 +20,7 @@ Emgo is a thin wrapper over go command. It has two main purposes:
 
 Specifies the target MCU/SOC family.
 
-Supported values: imxrt1060, k210, nrf52840, stm32f215, stm32f407, stm32f412, stm32h7x3, stm32l4x6
+Supported values: imxrt1060, k210, n64, noostest, nrf52840, stm32f215, stm32f407, stm32f412, stm32h7x3, stm32l4x6
 
 `GOTEXT` (default value dependent on `GOTARGET`)
 
@@ -28,7 +28,7 @@ Specifies the beggining of code memory, usually Flash. For most targets its defa
 
 CAUTION! Wrong or default setting may destroy the preprogrammed bootloader on any target.
 
-`GOMEM` (required, no default value)
+`GOMEM` (required, has no default value for most targets)
 
 Ddescribes the structure of available RAM. Currently at most two RAM regions can be specified. The first one is considered DMA capable and available for the user code (stacks, heap, global variables). The second one (if exists) is used only for the runtime internal structures making more of the DMA capable RAM available for the user code.
 
@@ -36,15 +36,15 @@ The format is START_ADDRESS:SIZE or START_ADDRESS1:SIZE1,START_ADDRESS2:SIZE2
 
 `GOOUT` (default: "")
 
-By default `emgo build` produces an ELF file only. If GOOUT is set the `objcopy` program is invoked to extract binary data from the ELF file. The extracted binary is saved in the format specified by `GOOUT`.
+By default `emgo build` produces an ELF file only. If GOOUT is set it also produces one of the supported image formats.
 
-Supported values: bin, hex.
+Supported values: bin, hex, z64.
 
 `GOSTRIPFN` (default: 0)
 
-Aallows to slightly reduce the size of compiled binary at the cost of less information in the stack traces.
+Allows to slightly reduce the size of compiled binary at the cost of less information in the stack traces.
 
-Supported values: 0 - do nothing, 1 - remove package path, 2 - blank function names.
+Supported values: 0 - do nothing, 1 - remove package path.
 
 `ISRNAMES` (default: "")
 
@@ -52,4 +52,4 @@ Specifies a package containing the interrupt names to produce a `zisrnames.go` f
 
 If not set the `emgo` uses a default interrupt package infered from `GOTARGET`. Set `ISRNAMES` to `no` to avoid generation of `zisrnames.go`.
 
-The file is deleted after a successful build. You can see its content if the compilation fails.
+The `zisrnames.go` file is deleted after a successful build. You can see its content if the compilation fails.
