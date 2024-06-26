@@ -30,8 +30,6 @@ import _ "unsafe"
 
 `
 
-var workDir string
-
 func die(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format, a...)
 	os.Exit(1)
@@ -47,7 +45,7 @@ func dieErr(err error) {
 func updateCfgFromFile(cfg map[string]string) {
 	f, err := os.Open(cfgFile)
 	if err != nil {
-		f, err = os.Open(filepath.Join(filepath.Dir(workDir), cfgFile))
+		f, err = os.Open(filepath.Join("..", cfgFile))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				return
@@ -93,7 +91,7 @@ func gointerrupthandler() bool {
 	return false
 }
 
-func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
+func noosBuildTest(cmd *exec.Cmd, cfg map[string]string) {
 	// Infer GOARCH, GOARM, GOTEXT from GOTARGET
 	gotarget := cfg["GOTARGET"]
 	if gotarget == "" {
@@ -186,7 +184,7 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 		cut                *string
 		args               []string
 	)
-	for _, a := range os.Args[2:] {
+	for _, a := range cmd.Args[2:] {
 		if cut != nil {
 			*cut = a
 			cut = nil
@@ -219,10 +217,12 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 		ldflags += " -stripfn " + cfg["GOSTRIPFN"]
 	}
 	if out == "" {
+		workDir, err := os.Getwd()
+		dieErr(err)
 		out = filepath.Base(workDir) + ".elf"
 	}
-	cmd.Args = []string{cmd.Args[0], os.Args[1], "-tags", tags, "-ldflags", ldflags}
-	if os.Args[1] == "test" {
+	cmd.Args = []string{cmd.Args[0], cmd.Args[1], "-tags", tags, "-ldflags", ldflags}
+	if cmd.Args[1] == "test" {
 		cmd.Args = append(cmd.Args, "-exec", "emgo")
 	} else {
 		cmd.Args = append(cmd.Args, "-o", out)
@@ -241,8 +241,6 @@ func noosBuild(cmd *exec.Cmd, cfg map[string]string) {
 	if cfg["GOOUT"] != "" {
 		objcopy(out, obj, cfg["GOOUT"], cfg["GOINCBIN"])
 	}
-
-	os.Exit(0)
 }
 
 func cfgFromEnv() map[string]string {
@@ -286,6 +284,11 @@ func main() {
 		dieErr(err)
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "noostest" {
+		stdtests(goCmd)
+		return
+	}
+
 	cmd := &exec.Cmd{
 		Path:   goCmd,
 		Args:   os.Args,
@@ -293,9 +296,6 @@ func main() {
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-
-	workDir, err = os.Getwd()
-	dieErr(err)
 
 	// Initialize all known variables from environment.
 	cfg := cfgFromEnv()
@@ -324,7 +324,8 @@ func main() {
 	if len(os.Args) >= 2 && cfg["GOOS"] == "noos" {
 		switch os.Args[1] {
 		case "build", "test":
-			noosBuild(cmd, cfg)
+			noosBuildTest(cmd, cfg)
+			return
 		}
 	}
 
