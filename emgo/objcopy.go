@@ -72,7 +72,7 @@ func padBytes(cache *[]byte, n int, b byte) []byte {
 	return (*cache)[:n]
 }
 
-func objcopy(elfFile, obj, format, incbin string) {
+func objcopy(elfFile, obj string, cfg map[string]string) {
 	r, err := os.Open(elfFile)
 	dieErr(err)
 	defer r.Close()
@@ -108,13 +108,17 @@ func objcopy(elfFile, obj, format, incbin string) {
 		s.offset -= startOffset
 		s.addr = startAddr + uint64(s.offset)
 	}
-	if incbin != "" {
+	if incbin := cfg["GOINCBIN"]; incbin != "" {
 		sections = includeBins(sections, incbin)
 	}
-	switch format {
-	case "bin", "z64":
+	switch format := cfg["GOOUT"]; format {
+	case "bin", "z64", "uf2":
 		var w io.Writer
-		if format == "z64" {
+		n64 := cfg["GOTARGET"] == "n64"
+		if format != "bin" && !n64 {
+			die("objcopy: z64, uf2 formats allowed only for GOTARGET=n64")
+		}
+		if n64 {
 			w = bytes.NewBuffer(make([]byte, 0, n64ChecksumLen))
 		} else {
 			f, err := os.Create(obj + ".bin")
@@ -135,8 +139,9 @@ func objcopy(elfFile, obj, format, incbin string) {
 			_, err = w.Write(padBytes(&ones, pad, 0xff))
 			dieErr(err)
 		}
-		if format == "z64" {
-			n64WriteROMFile(obj, w.(*bytes.Buffer))
+		if n64 {
+			wb := w.(*bytes.Buffer)
+			n64WriteROMFile(obj, format, wb)
 		}
 	case "hex":
 		w, err := os.Create(obj + ".hex")

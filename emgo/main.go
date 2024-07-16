@@ -42,6 +42,11 @@ func dieErr(err error) {
 	}
 }
 
+func warn(format string, a ...any) {
+	fmt.Fprintf(os.Stderr, format, a...)
+}
+
+
 func updateCfgFromFile(cfg map[string]string) {
 	f, err := os.Open(cfgFile)
 	if err != nil {
@@ -239,7 +244,7 @@ func noosBuildTest(cmd *exec.Cmd, cfg map[string]string) {
 	os.Remove(obj + ".bin")
 
 	if cfg["GOOUT"] != "" {
-		objcopy(out, obj, cfg["GOOUT"], cfg["GOINCBIN"])
+		objcopy(out, obj, cfg)
 	}
 }
 
