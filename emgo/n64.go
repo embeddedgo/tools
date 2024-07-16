@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"io"
 	"os"
 )
 
@@ -74,7 +73,7 @@ func n64CRC(buf []byte) (crc [2]uint32) {
 	return
 }
 
-func n64WriteROMFile(obj string, buf *bytes.Buffer) {
+func n64WriteROMFile(obj, format string, buf *bytes.Buffer) {
 	pad := n64ChecksumLen - buf.Len()
 	if pad > 0 {
 		buf.Write(padBytes(&ones, pad, 0xff))
@@ -83,15 +82,96 @@ func n64WriteROMFile(obj string, buf *bytes.Buffer) {
 	binary.BigEndian.PutUint32(n64Header[0x10:], crc[0])
 	binary.BigEndian.PutUint32(n64Header[0x14:], crc[1])
 	copy(n64Header[0x20:0x34], obj) // Game Title
-	f, err := os.Create(obj + ".z64")
+	rom := make([]byte, 0, len(n64Header)+len(n64IPL3)+buf.Len())
+	rom = append(rom, n64Header[:]...)
+	rom = append(rom, n64IPL3...)
+	rom = append(rom, buf.Bytes()...)
+
+	if format == "uf2" {
+		n64WriteUF2(obj, rom)
+	} else {
+		dieErr(os.WriteFile(obj+".z64", rom, 0644))
+	}
+}
+
+// n64WriteUF2 is a translation to Go of the generateAndSaveUF2 function from
+// https://kbeckmann.github.io/PicoCart64/js/PicoCart64.js
+// Original author: Konrad Beckmann.
+func n64WriteUF2(obj string, rom []byte) {
+	const (
+		chunkSize = 1024
+		header    = "picocartcompress"
+		_1M       = 1024 * 1024
+	)
+
+	// Split ROM into chunks
+
+	var (
+		chunkData   []byte
+		chunkNum    int
+		chunkMap    [(0x8000 - len(header)) / 2]uint16
+		chunkMapLen int
+	)
+
+	for i := 0; i < len(rom); i += chunkSize {
+		k := min(len(rom), i+chunkSize)
+		chunk := rom[i:k]
+
+		// Check if chunk is in chunks
+		index := 0
+		for index < chunkNum {
+			if bytes.HasPrefix(chunkData[index*chunkSize:], chunk) {
+				break
+			}
+			index++
+		}
+		if index == chunkNum {
+			// Found a unique chunk
+			chunkData = append(chunkData, chunk...)
+			index = chunkNum
+			chunkNum++
+		}
+		if chunkMapLen >= len(chunkMap) {
+			die("n64 uf2: chunk map overflow")
+		}
+		chunkMap[chunkMapLen] = uint16(index)
+		chunkMapLen++
+		//fmt.Printf("%d -> %d\n", i, index)
+	}
+
+	newSize := len(header) + len(chunkMap)*2 + len(chunkData)
+	flashStart := 0x10000000
+	lastAddr := 0x10030000 + newSize
+	flashEnd := flashStart + 2*_1M
+	//fmt.Printf("Full ROM size:   %10d bytes\n", len(rom))
+	//fmt.Printf("Header + Chunks: %10d bytes\n", newSize)
+	//fmt.Printf("Ratio:           %10d %%\n", newSize*100/len(rom))
+	//fmt.Printf("Address of last byte: %#x /  %#x\n", lastAddr, flashEnd)
+	if lastAddr > flashEnd {
+		warn(
+			"n64 uf2: the compressed ROM requires %d MiB of Flash (> 2 MiB)\n",
+			(lastAddr-flashStart+_1M-1)/_1M,
+		)
+	}
+
+	// Save compressed ROM
+
+	f, err := os.Create(obj + ".uf2")
 	dieErr(err)
 	defer f.Close()
-	_, err = f.Write(n64Header[:])
+
+	const (
+		familyIDPresent = 0x00002000
+		rpp2040         = 0xe48bff56 //  Raspberry Pi Pico RP2040
+	)
+
+	w := NewUF2Writer(f, 0x10030000, familyIDPresent, rpp2040, newSize)
+	_, err = w.WriteString(header)
 	dieErr(err)
-	_, err = io.WriteString(f, n64IPL3)
+	dieErr(binary.Write(w, binary.LittleEndian, chunkMap))
+	_, err = w.Write(chunkData)
 	dieErr(err)
-	_, err = f.Write(buf.Bytes())
-	dieErr(err)
+	dieErr(w.Flush())
 }
 
 /*
