@@ -108,7 +108,6 @@ func n64WriteUF2(obj string, rom []byte) {
 
 	var (
 		chunkData   []byte
-		chunkNum    int
 		chunkMap    [(0x8000 - len(header)) / 2]uint16
 		chunkMapLen int
 	)
@@ -117,26 +116,23 @@ func n64WriteUF2(obj string, rom []byte) {
 		k := min(len(rom), i+chunkSize)
 		chunk := rom[i:k]
 
-		// Check if chunk is in chunks
-		index := 0
-		for index < chunkNum {
-			if bytes.HasPrefix(chunkData[index*chunkSize:], chunk) {
+		// Check if chunk is in chunkData
+		for k = 0; k < len(chunkData); k += chunkSize {
+			if bytes.HasPrefix(chunkData[k:], chunk) {
 				break
 			}
-			index++
 		}
-		if index == chunkNum {
+		if k == len(chunkData) {
 			// Found a unique chunk
 			chunkData = append(chunkData, chunk...)
-			index = chunkNum
-			chunkNum++
 		}
 		if chunkMapLen >= len(chunkMap) {
 			die("n64 uf2: chunk map overflow")
 		}
-		chunkMap[chunkMapLen] = uint16(index)
+		k /= chunkSize // chunk number in chunkData
+		chunkMap[chunkMapLen] = uint16(k)
 		chunkMapLen++
-		//fmt.Printf("%d -> %d\n", i, index)
+		//fmt.Printf("%d -> %d\n", i, k)
 	}
 
 	newSize := len(header) + len(chunkMap)*2 + len(chunkData)
