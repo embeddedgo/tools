@@ -68,6 +68,9 @@ func (u *UF2Writer) Write(p []byte) (n int, err error) {
 
 func (u *UF2Writer) Flush() (err error) {
 	b := &u.b
+	if b.Len == 0 {
+		return
+	}
 	clear(b.Data[b.Len:])
 	err = binary.Write(u.w, binary.LittleEndian, b)
 	b.Addr += b.Len
