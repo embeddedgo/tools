@@ -46,7 +46,6 @@ func warn(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format, a...)
 }
 
-
 func updateCfgFromFile(cfg map[string]string) {
 	f, err := os.Open(cfgFile)
 	if err != nil {
@@ -148,6 +147,7 @@ func noosBuildTest(cmd *exec.Cmd, cfg map[string]string) {
 		ctx := &build.Default
 		ctx.GOARCH = cfg["GOARCH"]
 		ctx.GOOS = cfg["GOOS"]
+		ctx.GOROOT = os.Getenv("GOROOT")
 		ctx.BuildTags = []string{cfg["GOTARGET"]}
 		pkg, err := ctx.Import(path, "", 0)
 		dieErr(err)
