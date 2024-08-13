@@ -29,6 +29,8 @@ func imxrttweaks(gs []*Group) {
 				imxrtiomuxc(p)
 			case "lpuart":
 				imxrtlpuart(p)
+			case "lpi2c":
+				imxrtlpi2c(p)
 			case "lpspi":
 				imxrtlpspi(p)
 			case "ocotp":
@@ -379,6 +381,133 @@ func imxrtdma(p *Periph) {
 			r.Type = "CTRL"
 			r.Bits = nil
 		}
+	}
+}
+
+func imxrtlpi2c(p *Periph) {
+	var mmcr *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "MCCR0":
+			mmcr = r
+			mmcr.Name = "MCCR"
+			mmcr.Len = 1
+		case strings.HasPrefix(r.Name, "MCCR"):
+			p.Regs[i] = nil
+			mmcr.Len++
+		}
+		switch r.Name {
+		case "MCR", "SCR", "MSR", "SSR", "MCFGR1", "MCFGR2", "SCFGR1", "SCFGR2":
+			for _, bf := range r.Bits {
+				bf.Name = r.Name[:1] + bf.Name
+			}
+			if r.Name == "MCFGR1" {
+				for _, bf := range r.Bits {
+					switch bf.Name {
+					case "MPRESCALE":
+						for _, v := range bf.Values {
+							v.Name = fmt.Sprintf("Div%d", 1<<v.Value)
+						}
+					case "MPINCFG":
+						for _, v := range bf.Values {
+							switch v.Value {
+							case 0:
+								v.Name = "OpenDrain2pin"
+							case 1:
+								v.Name = "OutputOnly2pin"
+							case 2:
+								v.Name = "PushPull2pin"
+							case 3:
+								v.Name = "PushPull4pin"
+							case 4:
+								v.Name = "OpenDrain2pinSepSlave"
+							case 5:
+								v.Name = "OutputOnly2pinSepSlave"
+							case 6:
+								v.Name = "PushPull2pinSepSlave"
+							default: // 7
+								v.Name = "PushPull4pinInverted"
+							}
+						}
+					case "MMATCFG":
+						bf.Name = "MATCFG"
+						for _, v := range bf.Values {
+							switch v.Value {
+							case 0:
+								v.Name = "Disable"
+							case 2:
+								v.Name = "D0eqM0_or_D0eqM1"
+							case 3:
+								v.Name = "DXeqM0_or_DXeqM1"
+							case 4:
+								v.Name = "D0D1_eq_M0M1"
+							case 5:
+								v.Name = "DXDX1_eq_M0M1"
+							case 6:
+								v.Name = "D0andM0_eq_M0andM1"
+							case 7:
+								v.Name = "DXandM0_eq_M0andM1"
+							}
+						}
+					}
+				}
+			}
+		case "MIER", "SIER":
+			r.Type = r.Name[:1] + "SR"
+			r.Bits = nil
+		case "MTDR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "CMD":
+					for _, v := range bf.Values {
+						switch v.Value {
+						case 0:
+							v.Name = "Send"
+						case 1:
+							v.Name = "Recv"
+						case 2:
+							v.Name = "Stop"
+						case 3:
+							v.Name = "Discard"
+						case 4:
+							v.Name = "Start"
+						case 5:
+							v.Name = "StartNACK"
+						case 6:
+							v.Name = "StartHS"
+						default: // 7
+							v.Name = "StartHSNACK"
+						}
+					}
+				}
+			}
+		case "STDR":
+			r.Bits = nil
+		case "MRDR":
+			r.Type = "RDR"
+			r.Bits = nil
+		case "SRDR":
+			r.Type = "RDR"
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "DATA":
+					bf.Name = "RXDATA"
+				case "SOF":
+					bf.Descr += " (slave only)"
+				}
+			}
+		case "MDER":
+			r.Bits = nil
+			r.Type = "DER"
+		case "SDER":
+			r.Type = "DER"
+			for _, bf := range r.Bits {
+				if bf.Name == "AVDE" {
+					bf.Descr += " (slave only)"
+				}
+			}
+		}
+
 	}
 }
 

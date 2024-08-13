@@ -112,6 +112,9 @@ func pnameLess(a, b string) bool {
 }
 
 func dropDigits(s string) string {
+	if i := strings.Index(s, "i2c"); i >= 0 {
+		return s[:i+3] + dropDigits(s[i+3:])
+	}
 	return strings.Map(
 		func(r rune) rune {
 			if unicode.IsDigit(r) {
