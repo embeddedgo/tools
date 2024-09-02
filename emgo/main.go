@@ -276,6 +276,9 @@ func main() {
 	dieErr(err)
 	path = filepath.Join(filepath.Dir(path), "go")
 	_, err = os.Stat(filepath.Join(path, "VERSION"))
+	if err == nil {
+		_, err = os.Stat(filepath.Join(path, "bin", "go"))
+	}
 
 	var goCmd string
 	if err == nil {
@@ -287,6 +290,11 @@ func main() {
 		// Otherwise use go tool from PATH if available.
 		goCmd, err = exec.LookPath("go")
 		dieErr(err)
+		if os.Getenv("GOROOT") == "" {
+			out, err := exec.Command(goCmd, "env", "GOROOT").Output()
+			dieErr(err)
+			dieErr(os.Setenv("GOROOT", strings.TrimSpace(string(out))))
+		}
 	}
 
 	if len(os.Args) >= 2 && os.Args[1] == "noostest" {
