@@ -397,8 +397,14 @@ func imxrtlpi2c(p *Periph) {
 			mmcr.Len++
 		}
 		switch r.Name {
-		case "MCR", "SCR", "MSR", "SSR", "MCFGR1", "MCFGR2", "SCFGR1", "SCFGR2":
+		case "MCR", "MSR", "MCFGR1", "MCFGR2", "SCR", "SSR", "SCFGR1", "SCFGR2":
 			for _, bf := range r.Bits {
+				if bf.Name[0] == 'M' && strings.HasPrefix(bf.Descr, "Master") {
+					continue
+				}
+				if bf.Name[0] == 'S' && strings.HasPrefix(bf.Descr, "Slave") {
+					continue
+				}
 				bf.Name = r.Name[:1] + bf.Name
 			}
 			if r.Name == "MCFGR1" {
