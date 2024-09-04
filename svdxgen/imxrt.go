@@ -385,18 +385,13 @@ func imxrtdma(p *Periph) {
 }
 
 func imxrtlpi2c(p *Periph) {
-	var mmcr *Reg
-	for i, r := range p.Regs {
-		switch {
-		case r.Name == "MCCR0":
-			mmcr = r
-			mmcr.Name = "MCCR"
-			mmcr.Len = 1
-		case strings.HasPrefix(r.Name, "MCCR"):
-			p.Regs[i] = nil
-			mmcr.Len++
-		}
+	for _, r := range p.Regs {
 		switch r.Name {
+		case "MCCR0":
+			r.Type = "MCCR"
+		case "MCCR1":
+			r.Type = "MCCR"
+			r.Bits = nil
 		case "MCR", "MSR", "MCFGR1", "MCFGR2", "SCR", "SSR", "SCFGR1", "SCFGR2":
 			for _, bf := range r.Bits {
 				if bf.Name[0] == 'M' && strings.HasPrefix(bf.Descr, "Master") {
@@ -513,7 +508,6 @@ func imxrtlpi2c(p *Periph) {
 				}
 			}
 		}
-
 	}
 }
 
