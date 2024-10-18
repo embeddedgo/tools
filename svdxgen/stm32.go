@@ -199,10 +199,9 @@ func stm32spi(g *Group) {
 		}
 	}
 	for _, r := range spi.Regs {
-		switch {
-		case r.Name == "DR":
+		switch r.Name {
+		case "DR", "CRCPR", "RXCRCR", "TXCRCR", "TXDR", "RXDR", "CRCPOLY", "TXCRC", "RXCRC", "UDRDR":
 			r.Bits = nil
-			r.Type = "uint32"
 		}
 	}
 }
@@ -423,11 +422,77 @@ func stm32rcc(p *Periph) {
 		// BUG: core specific registers not supported
 		if strings.HasPrefix(r.Name, "C1_") || strings.HasPrefix(r.Name, "C2_") {
 			p.Regs[i] = nil
+			continue
+		}
+		switch r.Name {
+		case "CFGR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "SW":
+					if bf.Values == nil {
+						bf.Values = []*BitFieldValue{
+							{"SW_HSI", "HSI oscillator selected as system clock", 0},
+							{"SW_CSI", "CSI oscillator selected as system clock", 1},
+							{"SW_HSE", "HSE oscillator selected as system clock", 2},
+							{"SW_PLL1", "PLL1 selected as system clock", 3},
+						}
+					}
+				case "SWS":
+					if bf.Values == nil {
+						bf.Values = []*BitFieldValue{
+							{"SWS_HSI", "HSI oscillator used as system clock", 0},
+							{"SWS_CSI", "CSI oscillator used as system clock", 1},
+							{"SWS_HSE", "HSE oscillator used as system clock", 2},
+							{"SWS_PLL1", "PLL1 used as system clock", 3},
+						}
+					}
+				}
+			}
+		case "PLLCKSELR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "PLLSRC":
+					if bf.Values == nil {
+						bf.Values = []*BitFieldValue{
+							{"PLLSRC_HSI", "HSI selected as PLL clock", 0},
+							{"PLLSRC_CSI", "CSI selected as PLL clock", 1},
+							{"PLLSRC_HSE", "HSE selected as PLL clock", 2},
+							{"PLLSRC_NONE", "No clock to DIVMx divider and PLLs", 3},
+						}
+					}
+				}
+			}
+		case "BDCR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "RTCSRC":
+					bf.Name = "RTCSEL"
+					if bf.Values == nil {
+						bf.Values = []*BitFieldValue{
+							{"RTCSEL_NONE", "no clock", 0},
+							{"RTCSEL_LSE", "LSE oscillator clock used as RTC clock", 1},
+							{"RTCSEL_LSI", "LSI oscillator clock used as RTC clock", 2},
+							{"RTCSEL_HSE", "HSE clock divided by RTCPRE value is used as RTC clock", 3},
+						}
+					}
+				}
+			}
+		case "CIFR":
+			for _, bf := range r.Bits {
+				if bf.Name == "CSIRDY" {
+					bf.Name = "CSIRDYF"
+				}
+			}
 		}
 	}
 }
 
 func stm32rtc(p *Periph) {
+	for _, r := range p.Regs {
+		if strings.HasPrefix(r.Name, "RTC_") {
+			r.Name = r.Name[4:]
+		}
+	}
 	var bkpr *Reg
 	for i, r := range p.Regs {
 		switch {
