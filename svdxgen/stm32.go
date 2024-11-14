@@ -26,6 +26,8 @@ func stm32tweaks(gs []*Group) {
 			switch p.Name {
 			case "dma":
 				stm32dma(p)
+			case "dmamux", "dmamux1", "dmamux2":
+				stm32dmamux(p)
 			case "exti":
 				stm32exti(p)
 			case "flash":
@@ -51,6 +53,9 @@ func stm32irq(p *Periph) {
 	for _, inst := range p.Insts {
 		for _, irq := range inst.IRQs {
 			irq.Name = strings.ToUpper(irq.Name)
+			if strings.HasPrefix(irq.Name, "DMA_STR") {
+				irq.Name = "DMA1_STR" + irq.Name[7:]
+			}
 		}
 	}
 }
@@ -304,6 +309,82 @@ func stm32dma(p *Periph) {
 				pad.Len = padn
 			}
 			ch.SubRegs = append(ch.SubRegs, pad)
+		}
+	}
+}
+
+func stm32dmamux(p *Periph) {
+	for i, r := range p.Regs {
+		r.Name = strings.TrimPrefix(r.Name, "DMAMUX_")
+		for _, bf := range r.Bits {
+			if bf.Mask == 1 {
+				bf.Values = nil
+			}
+		}
+		switch {
+		case strings.HasSuffix(r.Name, "CR"):
+			switch r.Name[0] {
+			case 'C':
+				if r.Name != "C0CR" {
+					p.Regs[i] = nil
+					break
+				}
+				r.Name = "CCR"
+				r.Len = 16
+				if r.Descr == "" {
+					r.Descr = "DMA request line multiplexer channel x control register"
+				}
+				for _, bf := range r.Bits {
+					if bf.Name == "SPOL" {
+						bf.Values = []*BitFieldValue{
+							{"SPOL_NONE", "No event, i.e. no synchronization nor detection.", 0},
+							{"SPOL_RISING", "Rising edge", 1},
+							{"SPOL_FALLING", "Falling edge", 2},
+							{"SPOL_BOTH", "Rising and falling edges", 3},
+						}
+					}
+				}
+			case 'R':
+				if r.Name != "RG0CR" {
+					p.Regs[i] = nil
+					break
+				}
+				r.Name = "RGCR"
+				r.Len = 8
+				if r.Descr == "" {
+					r.Descr = "DMA request generator channel x control register"
+				}
+				for _, bf := range r.Bits {
+					if bf.Name == "GPOL" {
+						bf.Values = []*BitFieldValue{
+							{"GPOL_NONE", "No event, i.e. no synchronization nor detection.", 0},
+							{"GPOL_RISING", "Rising edge", 1},
+							{"GPOL_FALLING", "Falling edge", 2},
+							{"GPOL_BOTH", "Rising and falling edges", 3},
+						}
+					}
+				}
+			}
+		case r.Name == "CSR":
+			if r.Descr == "" {
+				r.Descr = "DMA request line multiplexer interrupt channel status register"
+			}
+		case r.Name == "CFR":
+			r.Type = "CSR"
+			r.Bits = nil
+			if r.Descr == "" {
+				r.Descr = "DMA request line multiplexer interrupt clear flag register"
+			}
+		case r.Name == "RGSR":
+			if r.Descr == "" {
+				r.Descr = "DMA request generator status register"
+			}
+		case r.Name == "RGCFR":
+			r.Type = "RGSR"
+			r.Bits = nil
+			if r.Descr == "" {
+				r.Descr = "DMA request generator clear flag register"
+			}
 		}
 	}
 }
