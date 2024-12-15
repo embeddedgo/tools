@@ -156,12 +156,8 @@ func n64WriteUF2(obj string, rom []byte) {
 	dieErr(err)
 	defer f.Close()
 
-	const (
-		familyIDPresent = 0x00002000
-		rpp2040         = 0xe48bff56 //  Raspberry Pi Pico RP2040
-	)
 
-	w := NewUF2Writer(f, 0x10030000, familyIDPresent, rpp2040, newSize)
+	w := NewUF2Writer(f, 0x10030000, UF2FamilyIDPresent, uf2_rp2040, newSize)
 	_, err = w.WriteString(header)
 	dieErr(err)
 	dieErr(binary.Write(w, binary.LittleEndian, chunkMap))

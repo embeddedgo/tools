@@ -10,6 +10,14 @@ import (
 	"unsafe"
 )
 
+const (
+	UF2NotMainFlash         = 0x00000001
+	UF2FileContainer        = 0x00001000
+	UF2FamilyIDPresent      = 0x00002000
+	UF2MD5ChecksumPresent   = 0x00004000
+	UF2ExtensionTagsPresent = 0x00008000
+)
+
 type uf2block struct {
 	Magic0 uint32
 	Magic1 uint32

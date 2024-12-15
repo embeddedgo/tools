@@ -115,10 +115,14 @@ func objcopy(elfFile, obj string, cfg map[string]string) {
 	case "bin", "z64", "uf2":
 		var w io.Writer
 		n64 := cfg["GOTARGET"] == "n64"
-		if format != "bin" && !n64 {
-			die("objcopy: z64, uf2 formats allowed only for GOTARGET=n64")
+		pico := cfg["GOTARGET"] == "rp2350"
+		if format == "z64" && !n64 {
+			die("objcopy: z64 format allowed only for n64 GOTARGET")
 		}
-		if n64 {
+		if format == "uf2" && !n64 && !pico {
+			die("objcopy: uf2 format allowed only for rp2350 or n64 GOTARGET")
+		}
+		if n64 || pico {
 			w = bytes.NewBuffer(make([]byte, 0, n64ChecksumLen))
 		} else {
 			f, err := os.Create(obj + ".bin")
@@ -139,9 +143,14 @@ func objcopy(elfFile, obj string, cfg map[string]string) {
 			_, err = w.Write(padBytes(&ones, pad, 0xff))
 			dieErr(err)
 		}
-		if n64 {
-			wb := w.(*bytes.Buffer)
-			n64WriteROMFile(obj, format, wb)
+		if format == "bin" {
+			return
+		}
+		switch {
+		case n64:
+			n64WriteROMFile(obj, format, w.(*bytes.Buffer))
+		default: // pico
+			picoWriteUF2(obj, w.(*bytes.Buffer))
 		}
 	case "hex":
 		w, err := os.Create(obj + ".hex")
