@@ -114,17 +114,16 @@ func objcopy(elfFile, obj string, cfg map[string]string) {
 	switch format := cfg["GOOUT"]; format {
 	case "bin", "z64", "uf2":
 		var w io.Writer
-		n64 := cfg["GOTARGET"] == "n64"
-		pico := cfg["GOTARGET"] == "rp2350"
-		if format == "z64" && !n64 {
-			die("objcopy: z64 format allowed only for n64 GOTARGET")
-		}
-		if format == "uf2" && !n64 && !pico {
-			die("objcopy: uf2 format allowed only for rp2350 or n64 GOTARGET")
-		}
-		if n64 || pico {
+		switch cfg["GOTARGET"] {
+		case "n64", "rp2350":
 			w = bytes.NewBuffer(make([]byte, 0, n64ChecksumLen))
-		} else {
+		default:
+			if format != "bin" {
+				die(
+					"objcopy: %s format not supported for GOTARGET=%s",
+					format, cfg["GOTARGET"],
+				)
+			}
 			f, err := os.Create(obj + ".bin")
 			dieErr(err)
 			defer f.Close()
@@ -143,14 +142,11 @@ func objcopy(elfFile, obj string, cfg map[string]string) {
 			_, err = w.Write(padBytes(&ones, pad, 0xff))
 			dieErr(err)
 		}
-		if format == "bin" {
-			return
-		}
-		switch {
-		case n64:
+		switch cfg["GOTARGET"] {
+		case "n64":
 			n64WriteROMFile(obj, format, w.(*bytes.Buffer))
-		default: // pico
-			picoWriteUF2(obj, w.(*bytes.Buffer))
+		case "rp2350":
+			picoImage(obj, format, w.(*bytes.Buffer))
 		}
 	case "hex":
 		w, err := os.Create(obj + ".hex")
@@ -166,26 +162,6 @@ func objcopy(elfFile, obj string, cfg map[string]string) {
 	}
 }
 
-/*
-	Old code, without support for GOINCBIN, based on the external objcopy.
-
-	objcopy, err := exec.LookPath("objcopy")
-	dieErr(err)
-	cmd = &exec.Cmd{
-		Path:   objcopy,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	switch cfg["GOOUT"] {
-	case "hex":
-		cmd.Args = []string{objcopy, "-O", "ihex", elf, obj + ".hex"}
-	case "bin":
-		cmd.Args = []string{objcopy, "-O", "binary", elf, obj + ".bin"}
-	default:
-		die("unknown GOOUT: \"%s\"\n", cfg["GOOUT"])
-	}
-	if cmd.Run() != nil {
-		os.Exit(1)
-	}
-*/
+func dieFormat(format, target string) {
+	die("objcopy: %s format not supported for GOTARGET=%s", format, target)
+}

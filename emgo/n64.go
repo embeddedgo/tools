@@ -87,10 +87,13 @@ func n64WriteROMFile(obj, format string, buf *bytes.Buffer) {
 	rom = append(rom, n64IPL3...)
 	rom = append(rom, buf.Bytes()...)
 
-	if format == "uf2" {
-		n64WriteUF2(obj, rom)
-	} else {
+	switch format {
+	case "z64":
 		dieErr(os.WriteFile(obj+".z64", rom, 0644))
+	case "uf2":
+		n64WriteUF2(obj, rom)
+	default:
+		dieFormat(format, "n64")
 	}
 }
 
@@ -155,7 +158,6 @@ func n64WriteUF2(obj string, rom []byte) {
 	f, err := os.Create(obj + ".uf2")
 	dieErr(err)
 	defer f.Close()
-
 
 	w := NewUF2Writer(f, 0x10030000, UF2FamilyIDPresent, uf2_rp2040, newSize)
 	_, err = w.WriteString(header)
