@@ -80,6 +80,7 @@ func (u *UF2Writer) Flush() (err error) {
 		return
 	}
 	clear(b.Data[b.Len:])
+	b.Len = uint32(len(b.Data))
 	err = binary.Write(u.w, binary.LittleEndian, b)
 	b.Addr += b.Len
 	b.Seq++
