@@ -18,6 +18,16 @@ const (
 	UF2ExtensionTagsPresent = 0x00008000
 )
 
+// UF2 families
+const (
+	uf2_rp2040        = 0xe48bff56
+	uf2_absolute      = 0xe48bff57
+	uf2_data          = 0xe48bff58
+	uf2_rp2350_arm_s  = 0xe48bff59
+	uf2_rp2350_riscv  = 0xe48bff5a
+	uf2_rp2350_arm_ns = 0xe48bff5b
+)
+
 type uf2block struct {
 	Magic0 uint32
 	Magic1 uint32
