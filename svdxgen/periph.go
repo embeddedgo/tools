@@ -234,6 +234,7 @@ func (g *Group) Save(ctx *ctx) {
 
 func savePeriphs(ctx *ctx) {
 	gmap := make(map[string]*Group)
+	pmap := make(map[string]*Periph)
 	for _, sp := range ctx.spsli {
 		var sdp *svd.Peripheral
 		if sp.DerivedFrom != nil {
@@ -259,6 +260,7 @@ func savePeriphs(ctx *ctx) {
 		var p *Periph
 		if sdp == nil {
 			p = &Periph{Name: strings.ToLower(sp.Name), OrigName: sp.Name}
+			pmap[sp.Name] = p
 			g.pmap[sp.Name] = p
 			if len(sp.Registers) > 0 {
 				sp.Clusters = append(
@@ -281,6 +283,13 @@ func savePeriphs(ctx *ctx) {
 			)
 		} else {
 			p = g.pmap[sdp.Name]
+			if p == nil {
+				p = pmap[sdp.Name]
+				if p == nil {
+					warn(sp.Name, "", "derived from non-existent "+sdp.Name)
+					continue
+				}
+			}
 		}
 		inst := &Instance{
 			Name:   sp.Name,
@@ -298,6 +307,7 @@ func savePeriphs(ctx *ctx) {
 		} else if sdp != nil && len(sdp.Interrupts) != 0 {
 			handleIRQs(ctx, inst, sdp.Interrupts)
 		}
+
 		p.Insts = append(p.Insts, inst)
 		ctx.instmap[inst.Name] = inst
 	}
@@ -353,6 +363,8 @@ func savePeriphs(ctx *ctx) {
 		k210bus(gsli, ctx)
 	case strings.HasPrefix(ctx.mcu, "imxrt"):
 		imxrttweaks(gsli)
+	case strings.HasPrefix(ctx.mcu, "rp"):
+		picotweaks(gsli)
 	}
 	saveIRQs(ctx)
 
