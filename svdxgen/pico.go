@@ -110,8 +110,8 @@ func picosio(p *Periph) {
 }
 
 func picopadsbank(p *Periph) {
-	firstGPIO := true
-	for _, r := range p.Regs {
+	var gpior *Reg
+	for i, r := range p.Regs {
 		switch {
 		case r.Name == "VOLTAGE_SELECT":
 			for _, bf := range r.Bits {
@@ -122,12 +122,15 @@ func picopadsbank(p *Periph) {
 					}
 				}
 			}
-		case strings.HasPrefix(r.Name, "GPIO") || r.Name == "SWCLK" || r.Name == "SWD":
-			r.Type = "GPIO"
-			if !firstGPIO {
-				r.Bits = nil
+		case strings.HasPrefix(r.Name, "GPIO"):
+			if r.Name != "GPIO0" {
+				p.Regs[i] = nil
+				gpior.Len++
 				break
 			}
+			gpior = r
+			r.Len = 1
+			r.Name = "GPIO"
 			for _, bf := range r.Bits {
 				if bf.Name == "DRIVE" {
 					for _, b := range bf.Values {
@@ -135,7 +138,9 @@ func picopadsbank(p *Periph) {
 					}
 				}
 			}
-			firstGPIO = false
+		case r.Name == "SWCLK" || r.Name == "SWD":
+			r.Type = "GPIO"
+			r.Bits = nil
 		}
 	}
 }
