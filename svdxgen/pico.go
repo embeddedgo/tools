@@ -11,10 +11,14 @@ import (
 
 func picotweaks(gs []*Group) {
 	for _, g := range gs {
+		g.Name = strings.ReplaceAll(g.Name, "_", "")
 		for _, p := range g.Periphs {
-			picointreg(p)
+			p.Name = strings.ReplaceAll(p.Name, "_", "")
+			picocommon(p)
 			switch p.Name {
-			case "pads_bank":
+			case "iobank":
+				picoiobank(p)
+			case "padsbank":
 				picopadsbank(p)
 			case "sha":
 				picosha(p)
@@ -22,24 +26,197 @@ func picotweaks(gs []*Group) {
 				picosio(p)
 			case "xosc":
 				picoxosc(p)
-			case "pll_sys":
+			case "pllsys":
 				picopllsys(p)
-			case "otp_data", "otp_data_raw", "pads_qspi", "qmi", "usb_dpram":
+			case "otpdata", "otpdataraw", "padsqspi", "qmi", "usbdpram":
 				p.Insts = nil
 			}
 		}
 	}
 }
 
-func picointreg(p *Periph) {
-	// Remove bits from the integer registers, that is the registers that have
-	// only one bitfield started from bit 0, without values.
+func picocommon(p *Periph) {
 	for _, r := range p.Regs {
 		if len(r.Bits) == 1 {
+			// Remove bits from the integer registers, that is the registers
+			// that have only one bitfield started from bit 0, without values.
 			bf := r.Bits[0]
 			if bits.TrailingZeros64(bf.Mask) == 0 && len(bf.Values) == 0 {
 				r.Bits = nil
+				continue
 			}
+		}
+		// Upper-case identifiers.
+		for _, bf := range r.Bits {
+			bf.Name = strings.ToUpper(bf.Name)
+			for _, v := range bf.Values {
+				v.Name = strings.ToUpper(v.Name)
+			}
+		}
+	}
+}
+
+func picoiobank(p *Periph) {
+	var gpio, intr, p0inte, p0intf, p0ints, p1inte, p1intf, p1ints, dinte, dintf, dints *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "GPIO0_STATUS":
+			status := *r
+			status.Name = "STATUS"
+			gpio = r
+			gpio.Name = "GPIO"
+			gpio.Len = 1
+			gpio.SubRegs = append(gpio.SubRegs, &status)
+		case r.Name == "GPIO0_CTRL":
+			r.Name = "CTRL"
+			gpio.SubRegs = append(gpio.SubRegs, r)
+			p.Regs[i] = nil
+			for _, bf := range r.Bits {
+				switch {
+				case bf.Name == "FUNCSEL":
+					v := bf.Values
+					v[0].Name = "F0"
+					v[1].Name = "F1_SPI"
+					v[2].Name = "F2_UART"
+					v[3].Name = "F3_I2C"
+					v[4].Name = "F4_PWM"
+					v[5].Name = "F5_SIO"
+					v[6].Name = "F6_PIO0"
+					v[7].Name = "F7_PIO1"
+					v[8].Name = "F8_PIO2"
+					v[9].Name = "F9"
+					v[10].Name = "F10_USB"
+				case strings.HasSuffix(bf.Name, "OVER"):
+					prefix := bf.Name[:len(bf.Name)-4] + "_"
+					for _, v := range bf.Values {
+						v.Name = prefix + v.Name
+					}
+				}
+			}
+		case strings.HasPrefix(r.Name, "GPIO"):
+			if strings.HasSuffix(r.Name, "_STATUS") {
+				gpio.Len++
+			}
+			p.Regs[i] = nil
+		case strings.HasPrefix(r.Name, "IRQSUMMARY_"):
+			n := len(r.Name)
+			if r.Name[n-1] == '0' {
+				r.Name = r.Name[:n-1]
+				r.Len = 2
+				r.Bits = nil
+			} else {
+				p.Regs[i] = nil
+			}
+		case strings.HasPrefix(r.Name, "INTR"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				intr.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			intr = r
+		case strings.HasPrefix(r.Name, "PROC0_INTE"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p0inte.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p0inte = r
+		case strings.HasPrefix(r.Name, "PROC0_INTF"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p0intf.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p0intf = r
+		case strings.HasPrefix(r.Name, "PROC0_INTS"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p0ints.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p0ints = r
+		case strings.HasPrefix(r.Name, "PROC1_INTE"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p1inte.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p1inte = r
+		case strings.HasPrefix(r.Name, "PROC1_INTF"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p1intf.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p1intf = r
+		case strings.HasPrefix(r.Name, "PROC1_INTS"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				p1ints.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			p1ints = r
+		case strings.HasPrefix(r.Name, "DORMANT_WAKE_INTE"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				dinte.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			dinte = r
+		case strings.HasPrefix(r.Name, "DORMANT_WAKE_INTF"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				dintf.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			dintf = r
+		case strings.HasPrefix(r.Name, "DORMANT_WAKE_INTS"):
+			n := len(r.Name)
+			if r.Name[n-1] != '0' {
+				p.Regs[i] = nil
+				dints.Len++
+				break
+			}
+			r.Name = r.Name[:n-1]
+			r.Len = 1
+			r.Bits = nil
+			dints = r
 		}
 	}
 }
@@ -69,7 +246,7 @@ func picosha(p *Periph) {
 func picosio(p *Periph) {
 	firstGPIOHI := true
 	var clbits *[]*BitField
-	var spinr *Reg
+	var spin *Reg
 	for i, r := range p.Regs {
 		switch {
 		case strings.HasPrefix(r.Name, "GPIO_HI"):
@@ -99,10 +276,10 @@ func picosio(p *Periph) {
 			}
 		case strings.HasPrefix(r.Name, "SPINLOCK") && r.Name != "SPINLOCK_ST":
 			if r.Name == "SPINLOCK0" {
-				spinr = r
-				spinr.Len = 1
+				spin = r
+				spin.Len = 1
 			} else {
-				spinr.Len++
+				spin.Len++
 				p.Regs[i] = nil
 			}
 		}
@@ -110,7 +287,7 @@ func picosio(p *Periph) {
 }
 
 func picopadsbank(p *Periph) {
-	var gpior *Reg
+	var gpio *Reg
 	for i, r := range p.Regs {
 		switch {
 		case r.Name == "VOLTAGE_SELECT":
@@ -125,10 +302,10 @@ func picopadsbank(p *Periph) {
 		case strings.HasPrefix(r.Name, "GPIO"):
 			if r.Name != "GPIO0" {
 				p.Regs[i] = nil
-				gpior.Len++
+				gpio.Len++
 				break
 			}
-			gpior = r
+			gpio = r
 			r.Len = 1
 			r.Name = "GPIO"
 			for _, bf := range r.Bits {
@@ -170,6 +347,11 @@ func picoxosc(p *Periph) {
 			r.Bits = nil
 		case "DORMANT":
 			r.Type = "uint32"
+			for _, bf := range r.Bits {
+				for _, v := range bf.Values {
+					v.Name += "_VAL"
+				}
+			}
 		}
 	}
 }
