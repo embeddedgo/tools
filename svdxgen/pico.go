@@ -250,7 +250,7 @@ func picosio(p *Periph) {
 	for i, r := range p.Regs {
 		switch {
 		case strings.HasPrefix(r.Name, "GPIO_HI"):
-			r.Type = "GPIO_HI"
+			r.Type = "uint32"
 			if firstGPIOHI {
 				firstGPIOHI = false
 			} else {
