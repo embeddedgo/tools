@@ -20,6 +20,8 @@ func picotweaks(gs []*Group) {
 				picoiobank(p)
 			case "padsbank":
 				picopadsbank(p)
+			case "resets":
+				picoresets(p)
 			case "sha":
 				picosha(p)
 			case "sio":
@@ -52,6 +54,18 @@ func picocommon(p *Periph) {
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
 			}
+		}
+	}
+}
+
+func picoresets(p *Periph) {
+	for _, r := range p.Regs {
+		switch r.Name {
+		case "RESET":
+			r.Type = "uint32"
+		case "WDSEL", "RESET_DONE":
+			r.Type = "uint32"
+			r.Bits = nil
 		}
 	}
 }
