@@ -16,6 +16,8 @@ func picotweaks(gs []*Group) {
 			p.Name = strings.ReplaceAll(p.Name, "_", "")
 			picocommon(p)
 			switch p.Name {
+			case "clocks":
+				picoclocks(p)
 			case "iobank":
 				picoiobank(p)
 			case "padsbank":
@@ -40,10 +42,11 @@ func picotweaks(gs []*Group) {
 func picocommon(p *Periph) {
 	for _, r := range p.Regs {
 		if len(r.Bits) == 1 {
-			// Remove bits from the integer registers, that is the registers
+			// Untype the integer registers, that is the registers
 			// that have only one bitfield started from bit 0, without values.
 			bf := r.Bits[0]
 			if bits.TrailingZeros64(bf.Mask) == 0 && len(bf.Values) == 0 {
+				//r.Type = "uint" + strconv.FormatUint(uint64(r.BitSiz), 10)
 				r.Bits = nil
 				continue
 			}
@@ -54,6 +57,93 @@ func picocommon(p *Periph) {
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
 			}
+		}
+	}
+}
+
+func picoclocks(p *Periph) {
+	var gpout *Reg
+	for i, r := range p.Regs {
+		switch {
+		case r.Name == "CLK_GPOUT0_CTRL":
+			ctrl := *r
+			ctrl.Name = "CTRL"
+			gpout = r
+			gpout.Name = "GPOUT"
+			gpout.Len = 1
+			gpout.SubRegs = append(gpout.SubRegs, &ctrl)
+		case r.Name == "CLK_GPOUT0_DIV":
+			r.Name = "DIV"
+			gpout.SubRegs = append(gpout.SubRegs, r)
+			p.Regs[i] = nil
+		case r.Name == "CLK_GPOUT0_SELECTED":
+			r.Name = "SELECTED"
+			gpout.SubRegs = append(gpout.SubRegs, r)
+			p.Regs[i] = nil
+		case strings.HasPrefix(r.Name, "CLK_GPOUT"):
+			p.Regs[i] = nil
+			if strings.HasSuffix(r.Name, "_CTRL") {
+				gpout.Len++
+			}
+		case strings.HasPrefix(r.Name, "CLK_"):
+			r.Name = r.Name[4:]
+			if strings.HasSuffix(r.Name, "_CTRL") {
+				for _, bf := range r.Bits {
+					prefix := r.Name[:len(r.Name)-4]
+					if bf.Name == "SRC" {
+						bf.Name = prefix + "SOURCE"
+					} else {
+						bf.Name = prefix + bf.Name
+					}
+					for _, v := range bf.Values {
+						v.Name = prefix + v.Name
+					}
+				}
+			}
+		}
+		switch r.Name {
+		case "SYS_DIV":
+			r.Type = "DIV"
+			r.Bits = nil
+		case "FC0_RESULT":
+			r.Type = "uint32"
+			for _, bf := range r.Bits {
+				bf.Name = "FC0_RESULT_" + bf.Name
+			}
+		case "DFTCLK_XOSC_CTRL":
+			r.Name = "DFT" + r.Name[6:]
+			r.Type = "DFT_OSC_CTRL"
+			src := r.Bits[0]
+			src.Name = "CLKSRC"
+			src.Values[0].Name = "CLKSRC_NULL"
+			src.Values[1].Name = "CLKSRC_PLL_PRIMARY"
+			src.Values[2].Name = "CLKSRC_GPIN"
+		case "DFTCLK_ROSC_CTRL", "DFTCLK_LPOSC_CTRL":
+			r.Name = "DFT" + r.Name[6:]
+			r.Type = "DFT_OSC_CTRL"
+			r.Bits = nil
+		case "FC0_SRC":
+			bf := r.Bits[0]
+			bf.Name = "FC0_SOURCE"
+			for _, v := range bf.Values {
+				v.Name = "FC0_" + v.Name
+			}
+		case "WAKE_EN0":
+			r.Type = "CLK0"
+			for _, bf := range r.Bits {
+				bf.Name = strings.TrimPrefix(bf.Name, "CLK_")
+			}
+		case "SLEEP_EN0", "ENABLED0":
+			r.Type = "CLK0"
+			r.Bits = nil
+		case "WAKE_EN1":
+			r.Type = "CLK1"
+			for _, bf := range r.Bits {
+				bf.Name = strings.TrimPrefix(bf.Name, "CLK_")
+			}
+		case "SLEEP_EN1", "ENABLED1":
+			r.Type = "CLK1"
+			r.Bits = nil
 		}
 	}
 }
