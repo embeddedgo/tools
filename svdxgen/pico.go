@@ -5,7 +5,6 @@
 package main
 
 import (
-	"math/bits"
 	"strings"
 )
 
@@ -45,7 +44,7 @@ func picocommon(p *Periph) {
 			// Untype the integer registers, that is the registers
 			// that have only one bitfield started from bit 0, without values.
 			bf := r.Bits[0]
-			if bits.TrailingZeros64(bf.Mask) == 0 && len(bf.Values) == 0 {
+			if bf.LSL == 0 && len(bf.Values) == 0 {
 				//r.Type = "uint" + strconv.FormatUint(uint64(r.BitSiz), 10)
 				r.Bits = nil
 				continue
@@ -62,44 +61,65 @@ func picocommon(p *Periph) {
 }
 
 func picoclocks(p *Periph) {
-	var gpout *Reg
+	var clk *Reg
 	for i, r := range p.Regs {
-		switch {
-		case r.Name == "CLK_GPOUT0_CTRL":
-			ctrl := *r
-			ctrl.Name = "CTRL"
-			gpout = r
-			gpout.Name = "GPOUT"
-			gpout.Len = 1
-			gpout.SubRegs = append(gpout.SubRegs, &ctrl)
-		case r.Name == "CLK_GPOUT0_DIV":
-			r.Name = "DIV"
-			gpout.SubRegs = append(gpout.SubRegs, r)
-			p.Regs[i] = nil
-		case r.Name == "CLK_GPOUT0_SELECTED":
-			r.Name = "SELECTED"
-			gpout.SubRegs = append(gpout.SubRegs, r)
-			p.Regs[i] = nil
-		case strings.HasPrefix(r.Name, "CLK_GPOUT"):
-			p.Regs[i] = nil
-			if strings.HasSuffix(r.Name, "_CTRL") {
-				gpout.Len++
-			}
-		case strings.HasPrefix(r.Name, "CLK_"):
+		if strings.HasPrefix(r.Name, "CLK_") && !strings.HasPrefix(r.Name, "CLK_SYS_RESUS_") {
 			r.Name = r.Name[4:]
-			if strings.HasSuffix(r.Name, "_CTRL") {
-				for _, bf := range r.Bits {
-					prefix := r.Name[:len(r.Name)-4]
-					if bf.Name == "SRC" {
-						bf.Name = prefix + "SOURCE"
+			k := strings.IndexByte(r.Name, '_')
+			prefix := r.Name[:k+1]
+			_ctrl := strings.HasSuffix(r.Name, "_CTRL")
+			_div := strings.HasSuffix(r.Name, "_DIV")
+			if _ctrl || _div {
+				if strings.HasPrefix(prefix, "GPOUT") {
+					if prefix == "GPOUT0_" {
+						prefix = "GPOUT_"
 					} else {
-						bf.Name = prefix + bf.Name
+						r.Bits = nil
 					}
+				}
+				for _, bf := range r.Bits {
+					bf.Name = prefix + bf.Name
 					for _, v := range bf.Values {
 						v.Name = prefix + v.Name
 					}
 				}
+			} else {
+				prefix = prefix[:len(prefix)-1]
+				r.Bits = []*BitField{{
+					Name:  prefix,
+					Mask:  uint64(clk.Len - 1),
+					Descr: "Index to the " + prefix + " register in the CLK array",
+				}}
 			}
+			switch {
+			case r.Name == "GPOUT0_CTRL":
+				clk = r
+				ctrl := *r
+				ctrl.Name = "CTRL"
+				clk.Name = "CLK"
+				clk.Len = 1
+				clk.SubRegs = append(clk.SubRegs, &ctrl)
+			case r.Name == "GPOUT0_DIV":
+				r.Name = "DIV"
+				clk.SubRegs = append(clk.SubRegs, r)
+				p.Regs[i] = nil
+			case r.Name == "GPOUT0_SELECTED":
+				r.Name = "SELECTED"
+				r.Type = "int32"
+				clk.SubRegs = append(clk.SubRegs, r)
+				p.Regs[i] = nil
+			case _ctrl:
+				clk.Len++
+				clk.SubRegs[0].Bits = append(clk.SubRegs[0].Bits, r.Bits...)
+				p.Regs[i] = nil
+			case _div:
+				clk.SubRegs[1].Bits = append(clk.SubRegs[1].Bits, r.Bits...)
+				p.Regs[i] = nil
+			default:
+				clk.SubRegs[2].Bits = append(clk.SubRegs[2].Bits, r.Bits...)
+				p.Regs[i] = nil
+			}
+			continue
 		}
 		switch r.Name {
 		case "SYS_DIV":
@@ -129,20 +149,20 @@ func picoclocks(p *Periph) {
 				v.Name = "FC0_" + v.Name
 			}
 		case "WAKE_EN0":
-			r.Type = "CLK0"
+			r.Type = "CLK0_EN"
 			for _, bf := range r.Bits {
-				bf.Name = strings.TrimPrefix(bf.Name, "CLK_")
+				bf.Name = strings.TrimPrefix(bf.Name, "CLK_") + "_EN"
 			}
 		case "SLEEP_EN0", "ENABLED0":
-			r.Type = "CLK0"
+			r.Type = "CLK0_EN"
 			r.Bits = nil
 		case "WAKE_EN1":
-			r.Type = "CLK1"
+			r.Type = "CLK_EN1"
 			for _, bf := range r.Bits {
-				bf.Name = strings.TrimPrefix(bf.Name, "CLK_")
+				bf.Name = strings.TrimPrefix(bf.Name, "CLK_") + "_EN"
 			}
 		case "SLEEP_EN1", "ENABLED1":
-			r.Type = "CLK1"
+			r.Type = "CLK1_EN"
 			r.Bits = nil
 		}
 	}
