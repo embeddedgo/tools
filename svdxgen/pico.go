@@ -326,6 +326,10 @@ func picoiobank(p *Periph) {
 }
 
 func picopllsys(p *Periph) {
+	p.Name = "pll"
+	for _, inst := range p.Insts {
+		inst.Name = strings.TrimPrefix(inst.Name, "PLL_")
+	}
 	for _, r := range p.Regs {
 		switch {
 		case r.Name == "PRIM":
