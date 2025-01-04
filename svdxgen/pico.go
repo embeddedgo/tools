@@ -27,13 +27,15 @@ func picotweaks(gs []*Group) {
 				picosha(p)
 			case "sio":
 				picosio(p)
-			case "xosc":
-				picoxosc(p)
 			case "pllsys":
 				picopllsys(p)
+			case "qmi":
+				picoqmi(p)
 			case "ticks":
 				picoticks(p)
-			case "otpdata", "otpdataraw", "padsqspi", "qmi", "usbdpram":
+			case "xosc":
+				picoxosc(p)
+			case "otpdata", "otpdataraw", "padsqspi", "usbdpram":
 				p.Insts = nil
 			}
 		}
@@ -57,6 +59,85 @@ func picocommon(p *Periph) {
 			bf.Name = strings.ToUpper(bf.Name)
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
+			}
+		}
+	}
+}
+
+func picoqmi(p *Periph) {
+	var m, atrans *Reg
+	for i, r := range p.Regs {
+		switch r.Name {
+		case "DIRECT_TX", "M0_RFMT":
+			for _, bf := range r.Bits {
+				if strings.HasSuffix(bf.Name, "_WIDTH") {
+					prefix := bf.Name[:len(bf.Name)-5]
+					for _, v := range bf.Values {
+						v.Name = prefix + v.Name
+					}
+				}
+			}
+		}
+		switch r.Name {
+		case "M0_TIMING":
+			m = r
+			tim := *r
+			tim.Name = "TIMING"
+			m.Name = "M"
+			m.Descr = "Configuration register for memory address windows"
+			m.Len = 1
+			m.SubRegs = append(m.SubRegs, &tim)
+			for _, bf := range tim.Bits {
+				if bf.Name == "PAGEBREAK" {
+					for _, v := range bf.Values {
+						v.Name = "PB_" + v.Name
+					}
+				}
+			}
+		case "M0_RFMT", "M0_WFMT", "M0_RCMD", "M0_WCMD":
+			r.Name = r.Name[3:]
+			r.Type = r.Name[1:]
+			m.SubRegs = append(m.SubRegs, r)
+			p.Regs[i] = nil
+			if r.Name == "WFMT" || r.Name == "WCMD" {
+				r.Bits = nil
+				break
+			}
+			if r.Name == "RCMD" {
+				break
+			}
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "PREFIX_LEN", "SUFFIX_LEN", "DUMMY_LEN":
+					for _, v := range bf.Values {
+						v.Name = bf.Name[:4] + "_" + v.Name
+					}
+				}
+			}
+		case "ATRANS0":
+			atrans = r
+			atrans.Name = "ATRANS"
+			atrans.Len = 1
+		case "DIRECT_CSR":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "CLKDIV", "RXDELAY":
+					bf.Name = "D" + bf.Name
+				}
+			}
+		default:
+			switch {
+			case strings.HasSuffix(r.Name, "_TIMING"):
+				m.Len++
+				p.Regs[i] = nil
+			case strings.HasSuffix(r.Name, "_RFMT") ||
+				strings.HasSuffix(r.Name, "_RCMD") ||
+				strings.HasSuffix(r.Name, "_WFMT") ||
+				strings.HasSuffix(r.Name, "_WCMD"):
+				p.Regs[i] = nil
+			case strings.HasPrefix(r.Name, "ATRANS"):
+				atrans.Len++
+				p.Regs[i] = nil
 			}
 		}
 	}
