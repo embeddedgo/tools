@@ -221,10 +221,20 @@ loop:
 	}
 	if generics {
 		for _, r := range regs {
-			if r.Bits == nil && r.SubRegs == nil && r.Type == r.Name {
-				// Avoid new type and use raw uintN register instead.
-				r.Type = "uint" + strconv.Itoa(r.BitSiz)
-				r.NewT = false
+			sr := r.SubRegs
+			i := 0
+			for {
+				if i < len(sr) {
+					r = sr[i]
+				}
+				if r.Bits == nil && r.Type == r.Name {
+					// Avoid new type and use raw uintN register instead.
+					r.Type = "uint" + strconv.Itoa(r.BitSiz)
+					r.NewT = false
+				}
+				if i++; i >= len(sr) {
+					break
+				}
 			}
 		}
 	}
