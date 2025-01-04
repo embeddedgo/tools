@@ -31,6 +31,8 @@ func picotweaks(gs []*Group) {
 				picoxosc(p)
 			case "pllsys":
 				picopllsys(p)
+			case "ticks":
+				picoticks(p)
 			case "otpdata", "otpdataraw", "padsqspi", "qmi", "usbdpram":
 				p.Insts = nil
 			}
@@ -55,6 +57,50 @@ func picocommon(p *Periph) {
 			bf.Name = strings.ToUpper(bf.Name)
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
+			}
+		}
+	}
+}
+
+func picoticks(p *Periph) {
+	// Add non-register constants at the beginning of p.Regs.
+	p.Regs = append([]*Reg{{Type: "int"}}, p.Regs...)
+	tickIDs := p.Regs[0]
+
+	var tick *Reg
+	for i, r := range p.Regs {
+		if i == 0 {
+			continue
+		}
+		_ctrl := strings.HasSuffix(r.Name, "_CTRL")
+		if _ctrl {
+			name := r.Name[:len(r.Name)-5]
+			tickIDs.Bits = append(tickIDs.Bits, &BitField{
+				Name:  name,
+				Mask:  uint64(i / 3),
+				Descr: "Index to the " + name + " register in the T array",
+			})
+		}
+		switch {
+		case r.Name == "PROC0_CTRL":
+			tick = r
+			ctrl := *r
+			ctrl.Name = "CTRL"
+			tick.Name = "T"
+			tick.Len = 1
+			tick.SubRegs = append(tick.SubRegs, &ctrl)
+		case r.Name == "PROC0_CYCLES":
+			r.Name = "CYCLES"
+			tick.SubRegs = append(tick.SubRegs, r)
+			p.Regs[i] = nil
+		case r.Name == "PROC0_COUNT":
+			r.Name = "COUNT"
+			tick.SubRegs = append(tick.SubRegs, r)
+			p.Regs[i] = nil
+		default:
+			p.Regs[i] = nil
+			if _ctrl {
+				tick.Len++
 			}
 		}
 	}
