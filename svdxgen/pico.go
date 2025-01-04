@@ -61,10 +61,20 @@ func picocommon(p *Periph) {
 }
 
 func picoclocks(p *Periph) {
+	// Add non-register constants at the beginning of p.Regs.
+	p.Regs = append([]*Reg{{Type: "int"}}, p.Regs...)
+	clkIDs := p.Regs[0]
+
 	var clk *Reg
 	for i, r := range p.Regs {
-		if strings.HasPrefix(r.Name, "CLK_") && !strings.HasPrefix(r.Name, "CLK_SYS_RESUS_") {
+		if i == 0 {
+			continue
+		}
+		if strings.HasPrefix(r.Name, "CLK_") {
 			r.Name = r.Name[4:]
+			if strings.HasPrefix(r.Name, "SYS_RESUS_") {
+				continue
+			}
 			k := strings.IndexByte(r.Name, '_')
 			prefix := r.Name[:k+1]
 			_ctrl := strings.HasSuffix(r.Name, "_CTRL")
@@ -85,11 +95,11 @@ func picoclocks(p *Periph) {
 				}
 			} else {
 				prefix = prefix[:len(prefix)-1]
-				r.Bits = []*BitField{{
+				clkIDs.Bits = append(clkIDs.Bits, &BitField{
 					Name:  prefix,
 					Mask:  uint64(clk.Len - 1),
 					Descr: "Index to the " + prefix + " register in the CLK array",
-				}}
+				})
 			}
 			switch {
 			case r.Name == "GPOUT0_CTRL":
@@ -105,7 +115,6 @@ func picoclocks(p *Periph) {
 				p.Regs[i] = nil
 			case r.Name == "GPOUT0_SELECTED":
 				r.Name = "SELECTED"
-				r.Type = "int32"
 				clk.SubRegs = append(clk.SubRegs, r)
 				p.Regs[i] = nil
 			case _ctrl:

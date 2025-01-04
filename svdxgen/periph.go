@@ -113,6 +113,12 @@ func (p *Periph) Save(ctx *ctx) {
 		if r == nil {
 			continue
 		}
+		if r.Name == "" {
+			if r.Type == "" {
+				die("register with empty name and type")
+			}
+			continue
+		}
 		fmt.Fprintf(tw, "//  0x%03X\t%2d\t ", r.Offset, r.BitSiz)
 		name := r.Name
 		if r.Type != "" {
@@ -204,14 +210,16 @@ func saveBits(w io.Writer, regs []*Reg) {
 			}
 		}
 		fmt.Fprintln(w, ")")
-		fmt.Fprintln(w, "\nconst (")
-		for _, bf := range r.Bits {
-			if bf == nil || bf.Name == "_" {
-				continue
+		if !strings.HasPrefix(typ, "int") {
+			fmt.Fprintln(w, "\nconst (")
+			for _, bf := range r.Bits {
+				if bf == nil || bf.Name == "_" {
+					continue
+				}
+				fmt.Fprintf(w, "\t%sn = %d\n", bf.Name, bf.LSL)
 			}
-			fmt.Fprintf(w, "\t%sn = %d\n", bf.Name, bf.LSL)
+			fmt.Fprintln(w, ")")
 		}
-		fmt.Fprintln(w, ")")
 	}
 }
 
