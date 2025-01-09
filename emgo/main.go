@@ -253,7 +253,8 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 		dieErr(err)
 		out = filepath.Base(workDir) + ".elf"
 	}
-	cmd.Args = []string{cmd.Args[0], cmd.Args[1], "-tags", tags}
+	argsTags := []string{cmd.Args[0], cmd.Args[1], "-tags", tags}
+	cmd.Args = append(cmd.Args[:0], argsTags...)
 	switch cmd.Args[1] {
 	case "build":
 		cmd.Args = append(cmd.Args, "-ldflags", ldflags, "-o", out)
@@ -261,6 +262,13 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 		cmd.Args = append(cmd.Args, "-ldflags", ldflags, "-exec", "emgo")
 	}
 	cmd.Args = append(cmd.Args, args...)
+	switch cmd.Args[1] {
+	case "build", "test":
+		vet := *cmd
+		vet.Args = argsTags
+		vet.Args[1] = "vet"
+		vet.Run()
+	}
 	if cmd.Run() != nil {
 		os.Exit(1)
 	}
