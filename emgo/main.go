@@ -260,6 +260,8 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 		cmd.Args = append(cmd.Args, "-ldflags", ldflags, "-o", out)
 	case "test":
 		cmd.Args = append(cmd.Args, "-ldflags", ldflags, "-exec", "emgo")
+	case "vet":
+		cmd.Args = append(cmd.Args, "-unsafeptr=false", "-stdmethods=false")
 	}
 	cmd.Args = append(cmd.Args, args...)
 	switch cmd.Args[1] {
@@ -267,6 +269,7 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 		vet := *cmd
 		vet.Args = argsTags
 		vet.Args[1] = "vet"
+		vet.Args = append(vet.Args, "-unsafeptr=false", "-stdmethods=false")
 		vet.Run()
 	}
 	if cmd.Run() != nil {
