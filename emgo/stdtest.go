@@ -236,7 +236,7 @@ func stdtests(goCmd string) {
 			cmd.Args[len(cmd.Args)-1] = skipArg
 			cmd.Args = append(cmd.Args, os.Args[2:]...)
 			//fmt.Println(cmd.Args)
-			noosBuildTest(cmd, cfgFromEnv())
+			noosBuildTestVet(cmd, cfgFromEnv())
 		}
 	}
 }
