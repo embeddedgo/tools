@@ -392,7 +392,7 @@ var defaults = map[string]struct{ GOARCH, GOARM, ISRNAMES string }{
 	"n64":       {"mips64", "", ""},
 	"noostest":  {},
 	"nrf52840":  {"thumb", "7,softfloat", "nrf5/hal/irq"},
-	"rp2350":    {"thumb", "7,softfloat", ""},
+	"rp2350":    {"thumb", "7,softfloat", "pico/hal/irq"},
 	"stm32f215": {"thumb", "7,softfloat", "stm32/hal/irq"},
 	"stm32f407": {"thumb", "7,softfloat", "stm32/hal/irq"},
 	"stm32f412": {"thumb", "7,softfloat", "stm32/hal/irq"},
