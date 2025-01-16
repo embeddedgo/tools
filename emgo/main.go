@@ -264,16 +264,20 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 		cmd.Args = append(cmd.Args, "-unsafeptr=false", "-stdmethods=false")
 	}
 	cmd.Args = append(cmd.Args, args...)
-	switch cmd.Args[1] {
+	vet := *cmd
+
+	if cmd.Run() != nil {
+		os.Exit(1)
+	}
+
+	switch vet.Args[1] {
 	case "build", "test":
-		vet := *cmd
 		vet.Args = argsTags
 		vet.Args[1] = "vet"
 		vet.Args = append(vet.Args, "-unsafeptr=false", "-stdmethods=false")
-		vet.Run()
-	}
-	if cmd.Run() != nil {
-		os.Exit(1)
+		if vet.Run() != nil {
+			os.Exit(0)
+		}
 	}
 
 	obj := strings.TrimSuffix(out, ".elf")
