@@ -33,6 +33,8 @@ func picotweaks(gs []*Group) {
 				picoqmi(p)
 			case "ticks":
 				picoticks(p)
+			case "uart":
+				picouart(p)
 			case "xosc":
 				picoxosc(p)
 			case "otpdata", "otpdataraw", "padsqspi", "usbdpram":
@@ -60,6 +62,20 @@ func picocommon(p *Periph) {
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
 			}
+		}
+	}
+}
+
+func picouart(p *Periph) {
+	for _, r := range p.Regs {
+		r.Descr = strings.TrimSuffix(r.Descr, ", "+r.Name)
+		r.Name = strings.TrimPrefix(r.Name, "UART")
+		switch r.Name {
+		case "DR":
+			r.Bits = nil
+			r.Descr = "Data register (bits: 0-7 data, 8-11 Rx error, see RSR)"
+		case "RSR":
+			r.Descr = strings.TrimSuffix(r.Descr, ", UARTRSR/UARTECR")
 		}
 	}
 }
