@@ -17,6 +17,8 @@ func picotweaks(gs []*Group) {
 			switch p.Name {
 			case "clocks":
 				picoclocks(p)
+			case "dma":
+				picodma(p)
 			case "iobank":
 				picoiobank(p)
 			case "padsbank":
@@ -61,6 +63,154 @@ func picocommon(p *Periph) {
 			bf.Name = strings.ToUpper(bf.Name)
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
+			}
+		}
+	}
+}
+
+func picodma(p *Periph) {
+	var (
+		ch, chdbg, irq, mpu Reg
+		tim, secch, secirq  *Reg
+	)
+	for i, r := range p.Regs {
+		switch {
+		case strings.HasPrefix(r.Name, "CH"):
+			p.Regs[i] = nil
+			if strings.Contains(r.Name, "_DBG_") {
+				if strings.HasPrefix(r.Name, "CH0_") {
+					r.Name = r.Name[4:]
+					if r.Name == "DBG_CTDREQ" {
+						chdbg = *r
+						chdbg.Name = "CH_DBG"
+						chdbg.Descr = "Channel debug registers"
+						chdbg.Len = 1
+						p.Regs[i] = &chdbg
+					}
+					chdbg.SubRegs = append(chdbg.SubRegs, r)
+				} else if strings.HasSuffix(r.Name, "DBG_CTDREQ") {
+					chdbg.Len++
+				}
+			} else {
+				if strings.HasPrefix(r.Name, "CH0_") {
+					r.Name = r.Name[4:]
+					if r.Name == "READ_ADDR" {
+						ch = *r
+						ch.Name = "CH"
+						ch.Descr = "Channel status and control registers"
+						ch.Len = 1
+						p.Regs[i] = &ch
+					}
+					ch.SubRegs = append(ch.SubRegs, r)
+				} else if strings.HasSuffix(r.Name, "_TRANS_COUNT_TRIG") {
+					ch.Len++
+				}
+			}
+		case strings.HasPrefix(r.Name, "INT"):
+			p.Regs[i] = nil
+			if r.Name == "INTR" {
+				r.Name = "INTR0"
+			}
+			if strings.HasSuffix(r.Name, "0") {
+				r.Name = r.Name[3 : len(r.Name)-1]
+				if r.Name == "R" {
+					irq = *r
+					irq.Name = "INT"
+					irq.Descr = "Interrupt status and control registers"
+					irq.Len = 1
+					p.Regs[i] = &irq
+				}
+				irq.SubRegs = append(irq.SubRegs, r)
+			} else if strings.HasPrefix(r.Name, "INTE") {
+				irq.Len++
+			}
+		case strings.HasPrefix(r.Name, "TIMER"):
+			if r.Name == "TIMER0" {
+				tim = r
+				r.Name = "TIMER"
+				r.Len = 1
+			} else {
+				tim.Len++
+				p.Regs[i] = nil
+			}
+		case strings.HasPrefix(r.Name, "SECCFG_CH"):
+			if r.Name == "SECCFG_CH0" {
+				secch = r
+				r.Name = "SECCFG_CH"
+				r.Len = 1
+			} else {
+				secch.Len++
+				p.Regs[i] = nil
+			}
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "P":
+					bf.Name = "PRI_CH"
+				case "S":
+					bf.Name = "SEC_CH"
+				}
+			}
+		case strings.HasPrefix(r.Name, "SECCFG_IRQ"):
+			if r.Name == "SECCFG_IRQ0" {
+				secirq = r
+				r.Name = "SECCFG_IRQ"
+				r.Len = 1
+			} else {
+				secirq.Len++
+				p.Regs[i] = nil
+			}
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "P":
+					bf.Name = "PRI_IRQ"
+				case "S":
+					bf.Name = "SEC_IRQ"
+				}
+			}
+		case r.Name == "MPU_CTRL":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "P":
+					bf.Name = "DEF_PRI"
+				case "S":
+					bf.Name = "DEF_SEC"
+				}
+			}
+		case strings.HasPrefix(r.Name, "MPU_"):
+			p.Regs[i] = nil
+			if strings.HasSuffix(r.Name, "0") {
+				r.Name = r.Name[4 : len(r.Name)-1]
+				if r.Name == "BAR" {
+					mpu = *r
+					mpu.Name = "MPU"
+					mpu.Descr = "DMA Memory Protection Unit registers"
+					mpu.Len = 1
+					p.Regs[i] = &mpu
+					r.Bits = nil
+				} else if r.Name == "LAR" {
+					for _, bf := range r.Bits {
+						switch bf.Name {
+						case "EN":
+							bf.Name = "REN"
+						case "P":
+							bf.Name = "RPRI"
+						case "S":
+							bf.Name = "RSEC"
+						}
+					}
+				}
+				mpu.SubRegs = append(mpu.SubRegs, r)
+			} else if strings.HasPrefix(r.Name, "MPU_BAR") {
+				mpu.Len++
+			}
+		case r.Name == "SNIFF_CTRL":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "EN":
+					bf.Name = "SEN"
+				case "BSWAP":
+					bf.Name = "SBSWAP"
+				}
 			}
 		}
 	}
