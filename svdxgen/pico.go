@@ -94,12 +94,17 @@ func picodma(p *Periph) {
 			} else {
 				if strings.HasPrefix(r.Name, "CH0_") {
 					r.Name = r.Name[4:]
-					if r.Name == "READ_ADDR" {
+					switch {
+					case r.Name == "READ_ADDR":
 						ch = *r
 						ch.Name = "CH"
 						ch.Descr = "Channel status and control registers"
 						ch.Len = 1
 						p.Regs[i] = &ch
+					case strings.Contains(r.Name, "TRANS_COUNT") && r.Name != "TRANS_COUNT":
+						r.Type = "TRANS_COUNT"
+					case strings.Contains(r.Name, "CTRL"):
+						r.Type = "CTRL"
 					}
 					ch.SubRegs = append(ch.SubRegs, r)
 				} else if strings.HasSuffix(r.Name, "_TRANS_COUNT_TRIG") {
