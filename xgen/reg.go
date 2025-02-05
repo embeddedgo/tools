@@ -227,7 +227,7 @@ loop:
 				if i < len(sr) {
 					r = sr[i]
 				}
-				if r.Bits == nil && r.Type == r.Name {
+				if len(r.Bits) == 0 && r.Type == r.Name {
 					// Avoid new type and use raw uintN register instead.
 					r.Type = "uint" + strconv.Itoa(r.BitSiz)
 					r.NewT = false
