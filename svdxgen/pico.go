@@ -231,6 +231,24 @@ func picouart(p *Periph) {
 			r.Descr = "Data register (bits: 0-7 data, 8-11 Rx error, see RSR)"
 		case "RSR":
 			r.Descr = strings.TrimSuffix(r.Descr, ", UARTRSR/UARTECR")
+		case "IMSC", "RIS", "MIS", "ICR":
+			r.Type = "INT"
+			if r.Name != "RIS" {
+				r.Bits = nil
+				break
+			}
+			for _, bf := range r.Bits {
+				name := strings.TrimSuffix(bf.Name, "RMIS")
+				if name != bf.Name {
+					name += "MI"
+				} else {
+					name = strings.TrimRight(bf.Name, "RIS") + "I"
+				}
+				bf.Name = name
+				if i := strings.Index(bf.Descr, " status."); i > 0 {
+					bf.Descr = bf.Descr[:i] + "."
+				}
+			}
 		}
 	}
 }
