@@ -47,6 +47,17 @@ func picotweaks(gs []*Group) {
 }
 
 func picocommon(p *Periph) {
+	for _, inst := range p.Insts {
+		if inst.Name == "DMA" {
+			inst.Name = "DMA0"
+		}
+		for _, irq := range inst.IRQs {
+			irq.Name = strings.Replace(irq.Name, "_IRQ", "", 1)
+			if strings.HasPrefix(irq.Name, "DMA_") {
+				irq.Name = "DMA0" + irq.Name[3:]
+			}
+		}
+	}
 	for _, r := range p.Regs {
 		if len(r.Bits) == 1 {
 			// Untype the integer registers, that is the registers
