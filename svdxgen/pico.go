@@ -29,6 +29,8 @@ func picotweaks(gs []*Group) {
 				picosha(p)
 			case "sio":
 				picosio(p)
+			case "spi":
+				picospi(p)
 			case "pllsys":
 				picopllsys(p)
 			case "qmi":
@@ -75,6 +77,26 @@ func picocommon(p *Periph) {
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
 			}
+		}
+	}
+}
+
+func picospi(p *Periph) {
+	for _, r := range p.Regs {
+		r.Name = strings.TrimPrefix(r.Name, "SSP")
+		r.Descr = strings.ReplaceAll(r.Descr, "SSP", "")
+		switch r.Name {
+		case "IMSC":
+			r.Type = "INT"
+			for _, bf := range r.Bits {
+				bf.Name = strings.TrimSuffix(bf.Name, "M")
+				if i := strings.Index(bf.Descr, " mask: "); i > 0 {
+					bf.Descr = bf.Descr[:i] + "."
+				}
+			}
+		case "RIS", "MIS", "ICR":
+			r.Type = "INT"
+			r.Bits = nil
 		}
 	}
 }
