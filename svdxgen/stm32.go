@@ -207,6 +207,9 @@ func stm32spi(g *Group) {
 		switch r.Name {
 		case "DR", "CRCPR", "RXCRCR", "TXCRCR", "TXDR", "RXDR", "CRCPOLY", "TXCRC", "RXCRC", "UDRDR":
 			r.Bits = nil
+		case "IER", "IFCR":
+			r.Type = "SR"
+			r.Bits = nil
 		}
 	}
 }
