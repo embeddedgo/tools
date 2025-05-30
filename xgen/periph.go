@@ -217,17 +217,17 @@ func (p *{{$p}}) BaseAddr() uintptr {
 				{{if $sr}}
 					{{range .Bits -}}
 						{{if $len -}}
-							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ &p.{{$r}}[i].{{$br}}, {{.}}} }
+							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ R: &p.{{$r}}[i].{{$br}}, Mask: {{.}}} }
 						{{- else -}}
-							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ &p.{{$r}}.{{$br}}, {{.}}} }
+							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ R: &p.{{$r}}.{{$br}}, Mask: {{.}}} }
 						{{- end}}
 					{{end}}
 				{{else}}
 					{{range .Bits -}}
 						{{if $len -}}
-							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ &p.{{$br}}[i], {{.}}} }
+							func {{.}}_ (p *{{$p}}, i int) {{$rm}} { return {{$rm}}{ R: &p.{{$br}}[i], Mask: {{.}}} }
 						{{- else -}}
-							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ &p.{{$br}}, {{.}}} }
+							func {{.}}_ (p *{{$p}}) {{$rm}} { return {{$rm}}{ R: &p.{{$br}}, Mask: {{.}}} }
 						{{- end}}
 					{{end}}
 				{{end}}
@@ -333,11 +333,11 @@ func (p *{{$p}}) BaseAddr() uintptr {
 					{{range .Bits}}
 						{{if $len}}
 							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $rr "[n]." $r "." $u "," $uint "(" . ")}}"}}
+								return {{print $rm "{" $mum "{R: &p." $rr "[n]." $r "." $u ", Mask:" $uint "(" . ")}}"}}
 							}
 						{{else}}
 							func {{.}}_ (p *{{$p}}) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $rr "." $r "." $u "," $uint "(" . ")}}"}}
+								return {{print $rm "{" $mum "{R: &p." $rr "." $r "." $u ", Mask:" $uint "(" . ")}}"}}
 							}
 						{{end}}
 					{{end}}
@@ -345,11 +345,11 @@ func (p *{{$p}}) BaseAddr() uintptr {
 					{{range .Bits}}
 						{{if $len}}
 							func {{.}}_ (p *{{$p}}, n int) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $r "[n]." $u "," $uint "(" . ")}}"}}
+								return {{print $rm "{" $mum "{R: &p." $r "[n]." $u ", Mask:" $uint "(" . ")}}"}}
 							}
 						{{else}}
 							func {{.}}_ (p *{{$p}}) {{$rm}} {
-								return {{print $rm "{" $mum "{&p." $r "." $u "," $uint "(" . ")}}"}}
+								return {{print $rm "{" $mum "{R: &p." $r "." $u ", Mask:" $uint "(" . ")}}"}}
 							}
 						{{end}}
 					{{end}}
