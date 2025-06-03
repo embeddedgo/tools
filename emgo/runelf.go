@@ -55,6 +55,7 @@ func runELF() int {
 	if len(args) == 0 {
 		die(elfbin + ": unknown ELF image")
 	}
+	//fmt.Println(args)
 	path, err := exec.LookPath(args[0])
 	dieErr(err)
 	cmd := &exec.Cmd{

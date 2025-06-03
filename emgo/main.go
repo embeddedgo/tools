@@ -271,7 +271,7 @@ func noosBuildTestVet(cmd *exec.Cmd, cfg map[string]string) {
 	}
 
 	switch vet.Args[1] {
-	case "build", "test":
+	case "build":
 		vet.Args = argsTags
 		vet.Args[1] = "vet"
 		vet.Args = append(vet.Args, "-unsafeptr=false", "-stdmethods=false")
