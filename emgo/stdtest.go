@@ -183,14 +183,14 @@ func stdtests(goCmd string) {
 
 	pkgs := testPkgs(".")
 
-	for _, arch := range []string{"thumb", "riscv64"} {
+	for _, arch := range []string{ "thumb", "riscv64"} {
 		dieErr(os.Setenv("GOARCH", arch))
-		fmt.Print("#### GOARCH=", arch, " ####\n\n")
+		fmt.Print("\n#### GOARCH=", arch, " ####\n\n")
 		dieErr(err)
 		for _, pkg := range pkgs {
 			cmd := &exec.Cmd{
 				Path:   goCmd,
-				Args:   []string{"emgo", "test", pkg, "-skip", ""},
+				Args:   []string{"emgo", "test", pkg, "-timeout", "30m", "-skip", ""},
 				Stdin:  os.Stdin,
 				Stdout: os.Stdout,
 				Stderr: os.Stderr,
