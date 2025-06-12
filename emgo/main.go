@@ -69,7 +69,7 @@ func updateCfgFromFile(cfg map[string]string) {
 			dieErr(err)
 		}
 		wd = filepath.Dir(wd)
-		if wd == "." {
+		if wd == "." || wd == "/" {
 			return
 		}
 	}
