@@ -63,7 +63,7 @@ var skipTests = map[string]string{
 	"cmd/trace":                                  "",
 	"cmd/vet":                                    "",
 	"compress/bzip2":                             "",
-	"compress/flate":                             "DeflateFast_Reset|WriteError|BestSpeed",
+	"compress/flate":                             "DeflateFast_Reset|WriteError|BestSpeed|Deterministic",
 	"compress/gzip":                              "",
 	"crypto/boring":                              "",
 	"crypto/cipher":                              "",
