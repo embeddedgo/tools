@@ -12,6 +12,7 @@ import (
 
 	"github.com/embeddedgo/tools/egtool/internal/bin"
 	"github.com/embeddedgo/tools/egtool/internal/hex"
+	"github.com/embeddedgo/tools/egtool/internal/uf2"
 )
 
 type tool struct {

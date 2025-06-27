@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package hex
+package uf2
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
-	"github.com/marcinbor85/gohex"
 )
 
-const Descr = "convert an ELF file to the Intel HEX format"
+const Descr = "convert an ELF file to the UF2 format"
 
 func Main(args []string) {
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	fs.Usage = func() {
-		os.Stderr.WriteString("Usage:\n  hex [OPTIONS] [ELF [HEX]]\nOptions:\n")
+		os.Stderr.WriteString("Usage:\n  uf2 [OPTIONS] [ELF [UF2]]\nOptions:\n")
 		fs.PrintDefaults()
 	}
 	inc := fs.String(
@@ -29,7 +29,7 @@ func Main(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	elf, hex := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), ".hex")
+	elf, uf2 := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), ".hex")
 	sections, err := util.ReadELF(elf)
 	util.FatalErr("readelf", err)
 	if *inc != "" {
@@ -38,13 +38,12 @@ func Main(args []string) {
 		sections = append(sections, isec...)
 	}
 	sections.SortByPaddr()
-	mem := gohex.NewMemory()
-	for _, s := range sections {
-		mem.AddBinary(uint32(s.Paddr), s.Data)
+	for i, s := range sections {
+		fmt.Printf(
+			"%d: Vaddr: %#x Paddr: %#x Offset: %#x DataLen: %d\n",
+			i, s.Vaddr, s.Paddr, s.Offset, len(s.Data),
+		)
 	}
-	w, err := os.Create(hex)
-	util.FatalErr("", err)
-	defer w.Close()
-	err = mem.DumpIntelHex(w, 16)
-	util.FatalErr("dumpintelhex", err)
+
+	_ = uf2
 }
