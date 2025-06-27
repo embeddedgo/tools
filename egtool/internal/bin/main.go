@@ -6,19 +6,14 @@ package bin
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
 )
 
-const shortDescr = "convert an ELF file to a binary image"
+const Descr = "convert an ELF file to a binary image"
 
 func Main(args []string) {
-	if len(args) == 0 {
-		fmt.Println(shortDescr)
-		return
-	}
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	fs.Usage = func() {
 		os.Stderr.WriteString("Usage:\n  bin [OPTIONS] [ELF [BIN]]\nOptions:\n")
@@ -45,12 +40,6 @@ func Main(args []string) {
 		util.FatalErr("readbins", err)
 		sections = append(sections, isec...)
 	}
-	/*for i, s := range sections {
-		fmt.Printf(
-			"%d: Vaddr: %#x Paddr: %#x Offset: %#x DataLen: %d\n",
-			i, s.Vaddr, s.Paddr, s.Offset, len(s.Data),
-		)
-	}*/
 	w, err := os.Create(bin)
 	util.FatalErr("", err)
 	defer w.Close()

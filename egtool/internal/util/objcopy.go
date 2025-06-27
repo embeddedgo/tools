@@ -81,7 +81,7 @@ func ReadBins(descr string) (Sections, error) {
 	bins := strings.Split(descr, ",")
 	ss := make(Sections, len(bins))
 	for k, ba := range bins {
-		i := strings.IndexByte(ba, ':')
+		i := strings.LastIndexByte(ba, ':')
 		if i <= 0 {
 			return nil, fmt.Errorf("bad '%s' in the -inc option", ba)
 		}

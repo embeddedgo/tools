@@ -14,9 +14,15 @@ import (
 	"github.com/embeddedgo/tools/egtool/internal/hex"
 )
 
-var tools = map[string]func(args []string){
-	"bin": bin.Main,
-	"hex": hex.Main,
+type tool struct {
+	descr string
+	main  func(args []string)
+}
+
+var tools = map[string]tool{
+	"bin": {bin.Descr, bin.Main},
+	"hex": {hex.Descr, hex.Main},
+	"uf2": {uf2.Descr, uf2.Main},
 }
 
 func printToolList() {
@@ -31,8 +37,7 @@ func printToolList() {
 	uw.WriteString("Usage:\n  egtool COMMAND [ARGUMENTS]\n\n")
 	uw.WriteString("Available commands:\n")
 	for _, name := range names {
-		fmt.Fprintf(uw, "  %*s  ", maxLen, name)
-		tools[name](nil)
+		fmt.Fprintf(uw, "  %*s  %s\n", maxLen, name, tools[name].descr)
 	}
 }
 
@@ -41,10 +46,10 @@ func main() {
 		printToolList()
 		return
 	}
-	toolMain := tools[os.Args[1]]
-	if toolMain == nil {
+	tool, ok := tools[os.Args[1]]
+	if !ok {
 		printToolList()
 		os.Exit(1)
 	}
-	toolMain(os.Args[1:])
+	tool.main(os.Args[1:])
 }

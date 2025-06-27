@@ -6,20 +6,15 @@ package hex
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
 	"github.com/marcinbor85/gohex"
 )
 
-const shortDescr = "convert an ELF file to the Intel HEX format"
+const Descr = "convert an ELF file to the Intel HEX format"
 
 func Main(args []string) {
-	if len(args) == 0 {
-		fmt.Println(shortDescr)
-		return
-	}
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 	fs.Usage = func() {
 		os.Stderr.WriteString("Usage:\n  bin [OPTIONS] [ELF [HEX]]\nOptions:\n")
@@ -43,12 +38,6 @@ func Main(args []string) {
 		sections = append(sections, isec...)
 	}
 	sections.SortByPaddr()
-	for i, s := range sections {
-		fmt.Printf(
-			"%d: Vaddr: %#x Paddr: %#x Offset: %#x DataLen: %d\n",
-			i, s.Vaddr, s.Paddr, s.Offset, len(s.Data),
-		)
-	}
 	mem := gohex.NewMemory()
 	for _, s := range sections {
 		mem.AddBinary(uint32(s.Paddr), s.Data)
