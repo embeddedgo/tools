@@ -12,7 +12,12 @@ import (
 )
 
 func Warn(f string, args ...any) {
-	fmt.Fprintf(os.Stderr, f, args...)
+	fmt.Fprintf(os.Stderr, f+"\n", args...)
+}
+
+func Fatal(f string, args ...any) {
+	fmt.Fprintf(os.Stderr, f+"\n", args...)
+	os.Exit(1)
 }
 
 // FatalError prints an error description and exits the program if the

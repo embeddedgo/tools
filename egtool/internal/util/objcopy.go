@@ -25,7 +25,8 @@ type Section struct {
 type Sections []*Section
 
 // ReadELF reads the loadable sections of the program and returns them as
-// a slice. The order of the returned sections is unspecified.
+// a slice. The order of the returned sections is unspecified. It returns at
+// least one section or error.
 func ReadELF(name string) (Sections, error) {
 	r, err := os.Open(name)
 	if err != nil {
@@ -71,6 +72,9 @@ func ReadELF(name string) (Sections, error) {
 			}
 		}
 		ss = append(ss, &Section{s.Addr, paddr, s.Offset, data})
+	}
+	if len(ss) == 0 {
+		return nil, errors.New("no loadable sections in ELF file")
 	}
 	return ss, nil
 }
@@ -150,7 +154,18 @@ func (ss Sections) Flatten(w io.Writer, pad byte) (n int, err error) {
 	return
 }
 
-// PadBytes returns the slice containing n byte equal b.
+// Size returns the total size of sections data. It may be less than the size
+// of flatten binary because it doesn't take into account possible gaps between
+// sections.
+func (ss Sections) Size() int64 {
+	var n int64
+	for _, s := range ss {
+		n += int64(len(s.Data))
+	}
+	return n
+}
+
+// PadBytes returns the slice containing n bytes equal to b.
 func PadBytes(cache *[]byte, n int, b byte) []byte {
 	if len(*cache) < n {
 		*cache = make([]byte, n)

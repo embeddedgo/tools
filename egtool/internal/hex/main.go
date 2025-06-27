@@ -6,7 +6,9 @@ package hex
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
 	"github.com/marcinbor85/gohex"
@@ -14,22 +16,26 @@ import (
 
 const Descr = "convert an ELF file to the Intel HEX format"
 
-func Main(args []string) {
-	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+func Main(cmd string, args []string) {
+	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	fs.Usage = func() {
-		os.Stderr.WriteString("Usage:\n  hex [OPTIONS] [ELF [HEX]]\nOptions:\n")
+		fmt.Fprintf(
+			os.Stderr,
+			"Usage:\n  %s [OPTIONS] [ELF [%s]]\nOptions:\n",
+			cmd, strings.ToUpper(cmd),
+		)
 		fs.PrintDefaults()
 	}
 	inc := fs.String(
 		"inc", "",
 		"binary files to be included BIN1:ADDR1[,BIN2:ADDR2[,...]]",
 	)
-	fs.Parse(args[1:])
+	fs.Parse(args)
 	if fs.NArg() > 2 {
 		fs.Usage()
 		os.Exit(1)
 	}
-	elf, hex := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), ".hex")
+	elf, out := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), ".hex")
 	sections, err := util.ReadELF(elf)
 	util.FatalErr("readelf", err)
 	if *inc != "" {
@@ -42,9 +48,9 @@ func Main(args []string) {
 	for _, s := range sections {
 		mem.AddBinary(uint32(s.Paddr), s.Data)
 	}
-	w, err := os.Create(hex)
+	of, err := os.Create(out)
 	util.FatalErr("", err)
-	defer w.Close()
-	err = mem.DumpIntelHex(w, 16)
+	defer of.Close()
+	err = mem.DumpIntelHex(of, 16)
 	util.FatalErr("dumpintelhex", err)
 }

@@ -5,18 +5,31 @@
 package bin
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
+	"maps"
 	"os"
+	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
 )
 
-const Descr = "convert an ELF file to a binary image"
+const (
+	DescrBin = "convert an ELF file to a binary image"
+	DescrUF2 = "convert an ELF file to the UF2 format"
+)
 
-func Main(args []string) {
-	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+func Main(cmd string, args []string) {
+	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	fs.Usage = func() {
-		os.Stderr.WriteString("Usage:\n  bin [OPTIONS] [ELF [BIN]]\nOptions:\n")
+		fmt.Fprintf(
+			os.Stderr,
+			"Usage:\n  %s [OPTIONS] [ELF [%s]]\nOptions:\n",
+			cmd, strings.ToUpper(cmd),
+		)
 		fs.PrintDefaults()
 	}
 	inc := fs.String(
@@ -27,12 +40,20 @@ func Main(args []string) {
 		"pad", 0xff,
 		"pad `byte` used to fill gaps between sections",
 	)
-	fs.Parse(args[1:])
+	var family string
+	if cmd == "uf2" {
+		fs.StringVar(
+			&family, "family", "",
+			"UF2 family `ID` (32-bit number) or a known family name:\n  "+
+				strings.Join(slices.Sorted(maps.Keys(uf2FamilyMap)), "\n  "),
+		)
+	}
+	fs.Parse(args)
 	if fs.NArg() > 2 {
 		fs.Usage()
 		os.Exit(1)
 	}
-	elf, bin := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), ".bin")
+	elf, out := util.InOutFiles(fs.Arg(0), ".elf", fs.Arg(1), "."+cmd)
 	sections, err := util.ReadELF(elf)
 	util.FatalErr("readelf", err)
 	if *inc != "" {
@@ -40,9 +61,35 @@ func Main(args []string) {
 		util.FatalErr("readbins", err)
 		sections = append(sections, isec...)
 	}
-	w, err := os.Create(bin)
-	util.FatalErr("", err)
-	defer w.Close()
-	_, err = sections.Flatten(w, byte(*pad))
-	util.FatalErr("flatten", err)
+	switch cmd {
+	case "bin":
+		of, err := os.Create(out)
+		util.FatalErr("", err)
+		defer of.Close()
+		_, err = sections.Flatten(of, byte(*pad))
+		util.FatalErr("flatten", err)
+	case "uf2":
+		familyID, ok := uf2FamilyMap[family]
+		if !ok {
+			u, err := strconv.ParseUint(family, 0, 32)
+			if err != nil {
+				util.Fatal(`uf2: bad family ID: "%s"`, family)
+			}
+			familyID = uint32(u)
+		}
+		buf := bytes.NewBuffer(make([]byte, 0, sections.Size()*2))
+		_, err = sections.Flatten(buf, byte(*pad))
+		util.FatalErr("flatten", err)
+		addr := uint32(sections[0].Paddr)
+		if uint64(addr) != sections[0].Paddr {
+			util.Fatal("uf2: the target address %#x doesn't fit in 32 bits")
+		}
+		of, err := os.Create(out)
+		util.FatalErr("", err)
+		defer of.Close()
+		w := newUF2Writer(of, addr, uf2FamilyIDPresent, familyID, buf.Len())
+		_, err = w.Write(buf.Bytes())
+		util.FatalErr("", err)
+		util.FatalErr("", w.Flush())
+	}
 }

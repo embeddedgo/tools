@@ -12,18 +12,17 @@ import (
 
 	"github.com/embeddedgo/tools/egtool/internal/bin"
 	"github.com/embeddedgo/tools/egtool/internal/hex"
-	"github.com/embeddedgo/tools/egtool/internal/uf2"
 )
 
 type tool struct {
 	descr string
-	main  func(args []string)
+	main  func(cmd string, args []string)
 }
 
 var tools = map[string]tool{
-	"bin": {bin.Descr, bin.Main},
+	"bin": {bin.DescrBin, bin.Main},
 	"hex": {hex.Descr, hex.Main},
-	"uf2": {uf2.Descr, uf2.Main},
+	"uf2": {bin.DescrUF2, bin.Main},
 }
 
 func printToolList() {
@@ -47,10 +46,11 @@ func main() {
 		printToolList()
 		return
 	}
-	tool, ok := tools[os.Args[1]]
+	cmd, args := os.Args[1], os.Args[2:]
+	tool, ok := tools[cmd]
 	if !ok {
 		printToolList()
 		os.Exit(1)
 	}
-	tool.main(os.Args[1:])
+	tool.main(cmd, args)
 }
