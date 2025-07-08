@@ -44,8 +44,8 @@ func Main(cmd string, args []string) {
 	if cmd == "uf2" {
 		fs.StringVar(
 			&family, "family", "",
-			"UF2 family `ID` (32-bit number) or a known family name:\n  "+
-				strings.Join(slices.Sorted(maps.Keys(uf2FamilyMap)), "\n  "),
+			"UF2 family `ID` (32-bit number) or a known family name:\n- "+
+				strings.Join(slices.Sorted(maps.Keys(uf2FamilyMap)), "\n- "),
 		)
 	}
 	fs.Parse(args)

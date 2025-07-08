@@ -53,6 +53,8 @@ func Main(cmd string, args []string) {
 	}
 	pkgs, err := packages.Load(&cfg, "")
 	util.FatalErr("", err)
+
+	// Collect the information about the handlers defined in the package.
 	pkg := pkgs[0]
 	for _, file := range pkg.Syntax {
 		for _, d := range file.Decls {
@@ -92,6 +94,8 @@ func Main(cmd string, args []string) {
 	if len(handlers) == 0 {
 		util.Fatal("package %s doesn't contain any interrupt handler", pkg.Name)
 	}
+
+	// Find the irq package in the imports and read the IRQ list from it.
 	var irq *packages.Package
 	for _, p := range pkg.Imports {
 		if p.Name == "irq" {
@@ -149,6 +153,8 @@ func Main(cmd string, args []string) {
 			}
 		}
 	}
+
+	// Match the defined handlers with the known interrupts.
 	for h, pos := range handlers {
 		in, ok := irqs[h]
 		if !ok {
