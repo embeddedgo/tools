@@ -10,10 +10,10 @@ import (
 	"os"
 	"slices"
 
-	"github.com/embeddedgo/tools/egtool/internal/bin"
-	"github.com/embeddedgo/tools/egtool/internal/hex"
-	"github.com/embeddedgo/tools/egtool/internal/isrnames"
-	"github.com/embeddedgo/tools/egtool/internal/load"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/bin"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/hex"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/isrnames"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/load"
 )
 
 type tool struct {
