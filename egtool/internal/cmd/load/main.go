@@ -14,8 +14,6 @@ import (
 
 const Descr = "load the program / memory range stored in a file onto the device"
 
-var quiet bool
-
 func Main(cmd string, args []string) {
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	fs.Usage = func() {
@@ -29,10 +27,10 @@ func Main(cmd string, args []string) {
 	target := fs.String(
 		"target", "auto",
 		"select the target device and transport:\n"+
-			"- auto: try to determine the target device automatically\n"+
-			"- pico: RP2350 (aka Raspberry Pi Pico 2) using USB PICOBOOT\n",
+			"auto: try to determine the target device automatically\n"+
+			"pico: RP2350 (aka Raspberry Pi Pico 2) via USB PICOBOOT\n",
 	)
-	fs.BoolVar(&quiet, "quiet", false, "do not print diagnostic information")
+	quiet := fs.Bool("quiet", false, "do not print diagnostic information")
 	fs.Parse(args)
 	if fs.NArg() > 1 {
 		fs.Usage()
@@ -50,7 +48,7 @@ func Main(cmd string, args []string) {
 	}
 	switch *target {
 	case "pico":
-		pico(elf)
+		pico(elf, *quiet)
 	default:
 		util.Fatal("unknown target: %s", *target)
 	}

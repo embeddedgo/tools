@@ -44,8 +44,8 @@ func Main(cmd string, args []string) {
 	if cmd == "uf2" {
 		fs.StringVar(
 			&family, "family", "",
-			"UF2 family `ID` (32-bit number) or a known family name:\n- "+
-				strings.Join(slices.Sorted(maps.Keys(uf2FamilyMap)), "\n- "),
+			"UF2 family `ID` (32-bit number) or a known family name:\n"+
+				strings.Join(slices.Sorted(maps.Keys(uf2FamilyMap)), "\n"),
 		)
 	}
 	fs.Parse(args)
@@ -77,7 +77,7 @@ func Main(cmd string, args []string) {
 			}
 			familyID = uint32(u)
 		}
-		buf := bytes.NewBuffer(make([]byte, 0, sections.Size()*2))
+		buf := bytes.NewBuffer(make([]byte, 0, sections.Size()*5/4))
 		_, err = sections.Flatten(buf, byte(*pad))
 		util.FatalErr("flatten", err)
 		addr := uint32(sections[0].Paddr)

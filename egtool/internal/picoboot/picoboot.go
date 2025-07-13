@@ -10,6 +10,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
 	usb "github.com/google/gousb"
@@ -21,20 +22,22 @@ const (
 	cmdExclusiveAccess uint8 = 0x01
 	cmdReboot          uint8 = 0x02
 	cmdFlashErase      uint8 = 0x03
-	cmdRead            uint8 = 0x84
+	cmdRead            uint8 = 0x04 | 0x80
 	cmdWrite           uint8 = 0x05
 	cmdExitXIP         uint8 = 0x06
 	cmdEnterXIP        uint8 = 0x07
 	cmdExec            uint8 = 0x08
 	cmdVectorizeFlash  uint8 = 0x09
 	cmdReboot2         uint8 = 0x0a
-	cmdGetInfo         uint8 = 0x8b
-	cmdOTPRead         uint8 = 0x8c
+	cmdGetInfo         uint8 = 0x0b | 0x80
+	cmdOTPRead         uint8 = 0x0c | 0x80
 	cmdOTPWrite        uint8 = 0x0d
 )
 
 type Conn struct {
-	usbCtx    *usb.Context
+	ctx       *usb.Context
+	dev       *usb.Device
+	iid       int
 	oe        *usb.OutEndpoint
 	ie        *usb.InEndpoint
 	cmdBuf    [32]byte
@@ -161,19 +164,23 @@ func Connect(busAddr string) (conn *Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
-	conn = &Conn{usbCtx: ctx, oe: oe, ie: ie}
+	conn = &Conn{ctx: ctx, dev: dev, iid: in, oe: oe, ie: ie}
 	binary.LittleEndian.AppendUint32(conn.cmdBuf[:0], magic)
 	return
 }
 
 func (c *Conn) Close() (err error) {
-	err = c.usbCtx.Close()
+	err = c.ctx.Close()
 	wrapErr("Close", &err)
 	return
 }
 
 func (c *Conn) writeCmd(cmdId uint8, transferLength int, args any) error {
-	cmdSize := binary.Size(args)
+	c.token++
+	cmdSize := 0
+	if args != nil {
+		cmdSize = binary.Size(args)
+	}
 	if uint(cmdSize) > 16 {
 		return errors.New("wrong args size")
 	}
@@ -183,17 +190,18 @@ func (c *Conn) writeCmd(cmdId uint8, transferLength int, args any) error {
 	buf = append(buf, cmdId, uint8(cmdSize))
 	buf = buf[:len(buf)+2] // reserved field
 	buf = le.AppendUint32(buf, uint32(transferLength))
-	buf, _ = binary.Append(buf, le, args)
+	if cmdSize != 0 {
+		buf, _ = binary.Append(buf, le, args)
+	}
 	n := len(buf)
 	buf = buf[:cap(buf)]
 	clear(buf[n:]) // padd with zeros
 	_, err := c.oe.Write(buf)
-	c.token++
 	return err
 }
 
-func (c *Conn) SetExclusiveAccess(ea bool) (err error) {
-	defer wrapErr("SetExclusiveAccess", &err)
+func (c *Conn) ExclusiveAccess(ea bool) (err error) {
+	defer wrapErrStatus(c, "ExclusiveAccess", &err)
 	var arg uint8
 	if ea {
 		arg = 1
@@ -206,19 +214,37 @@ func (c *Conn) SetExclusiveAccess(ea bool) (err error) {
 	return
 }
 
+func (c *Conn) FlashErase(addr uint32, size int) (err error) {
+	defer wrapErrStatus(c, "FlashErase", &err)
+	err = c.writeCmd(cmdFlashErase, 0, &[2]uint32{addr, uint32(size)})
+	if err != nil {
+		return
+	}
+	_, err = c.ie.Read(nil)
+	return
+}
+
 func (c *Conn) SetReadAddr(addr uint32) {
 	c.readSpec[0] = addr
+}
+
+func (c *Conn) ReadAddr() uint32 {
+	return c.readSpec[0]
 }
 
 func (c *Conn) SetWriteAddr(addr uint32) {
 	c.writeSpec[0] = addr
 }
 
+func (c *Conn) WriteAddr() uint32 {
+	return c.writeSpec[0]
+}
+
 // Read performs n-byte PICOBOOT read transaction (if err == nil then n is
 // always equal to len(p)) starting just after the last read address (see also
 // SetReadAddr).
 func (c *Conn) Read(p []byte) (n int, err error) {
-	defer wrapErr("Read", &err)
+	defer wrapErrStatus(c, "Read", &err)
 	c.readSpec[1] = uint32(len(p))
 	err = c.writeCmd(cmdRead, len(p), &c.readSpec)
 	if err != nil {
@@ -234,7 +260,7 @@ func (c *Conn) Read(p []byte) (n int, err error) {
 }
 
 func (c *Conn) Write(p []byte) (n int, err error) {
-	defer wrapErr("Write", &err)
+	defer wrapErrStatus(c, "Write", &err)
 	c.writeSpec[1] = uint32(len(p))
 	err = c.writeCmd(cmdWrite, len(p), &c.writeSpec)
 	if err != nil {
@@ -245,6 +271,44 @@ func (c *Conn) Write(p []byte) (n int, err error) {
 		return
 	}
 	c.writeSpec[0] += uint32(n)
+	_, err = c.ie.Read(nil)
+	return
+}
+
+func (c *Conn) ExitXIP() (err error) {
+	defer wrapErrStatus(c, "ExitXIP", &err)
+	err = c.writeCmd(cmdExitXIP, 0, nil)
+	if err != nil {
+		return
+	}
+	_, err = c.ie.Read(nil)
+	return
+}
+
+const (
+	// Reboot2 types
+	RebootNormal      uint32 = 0x0
+	RebootBootsel     uint32 = 0x2
+	RebootRAMImage    uint32 = 0x3
+	RebootFlashUpdate uint32 = 0x4
+	RebootPCSP        uint32 = 0xd
+
+	// Optional flags that can be ORed to the type
+	RebootToARM   uint32 = 1 << 4
+	RebootToRISCV uint32 = 1 << 5
+)
+
+func (c *Conn) Reboot2(rebootType uint32, delay time.Duration, p0, p1 uint32) (err error) {
+	defer wrapErrStatus(c, "Reboot2", &err)
+	a := [4]uint32{
+		rebootType,
+		uint32(delay / time.Millisecond),
+		p0, p1,
+	}
+	err = c.writeCmd(cmdReboot2, 0, &a)
+	if err != nil {
+		return
+	}
 	_, err = c.ie.Read(nil)
 	return
 }
@@ -277,10 +341,12 @@ const (
 	SinglePartition           uint32 = 1 << 15
 )
 
-func (c *Conn) GetInfo(args [4]uint32, info []uint32) (err error) {
-	defer wrapErr("GetInfo", &err)
+func (c *Conn) GetInfo(info []uint32, args ...uint32) (err error) {
+	defer wrapErrStatus(c, "GetInfo", &err)
 	nbytes := len(info) * 4
-	err = c.writeCmd(cmdGetInfo, nbytes, &args)
+	var a [4]uint32
+	copy(a[:], args)
+	err = c.writeCmd(cmdGetInfo, nbytes, &a)
 	if err != nil {
 		return
 	}
@@ -299,6 +365,112 @@ func (c *Conn) GetInfo(args [4]uint32, info []uint32) (err error) {
 	le := binary.LittleEndian
 	for i := range info {
 		info[i] = le.Uint32(buf[i*4:])
+	}
+	return
+}
+
+// Token returns a token associated to the last command.
+func (c *Conn) Token() uint32 {
+	return c.token
+}
+
+var cmdStr = []string{
+	cmdExclusiveAccess: "ExclusiveAccess",
+	cmdReboot:          "Reboot",
+	cmdFlashErase:      "FlashErase",
+	cmdRead &^ 0x80:    "Read",
+	cmdWrite:           "Write",
+	cmdExitXIP:         "ExitXIP",
+	cmdEnterXIP:        "EnterXIP",
+	cmdExec:            "Exec",
+	cmdVectorizeFlash:  "VectorizeFlash",
+	cmdReboot2:         "Reboot2",
+	cmdGetInfo &^ 0x80: "GetInfo",
+	cmdOTPRead &^ 0x80: "OTPRead",
+	cmdOTPWrite:        "OTPWrite",
+}
+
+var statusStr = [...]string{
+	1:  "unknown cmd",
+	2:  "invalid cmd lenght",
+	3:  "invalid transfer lenght",
+	4:  "invalid address",
+	5:  "bad alignment",
+	6:  "interleaved write",
+	7:  "rebooting",
+	8:  "unknown error",
+	9:  "invalid state",
+	10: "not permitted",
+	11: "invalid arg",
+	12: "buffer too small",
+	13: "precondition not met",
+	14: "modified data",
+	15: "invalid data",
+	16: "not found",
+	17: "unsupported modification",
+}
+
+type StatusError struct {
+	Cmd    string
+	Status string
+}
+
+func (e *StatusError) Error() string {
+	return e.Cmd + " status: " + e.Status
+}
+
+func wrapErrStatus(c *Conn, op string, err *error) {
+	if *err == nil {
+		return
+	}
+	_, _, err1 := c.GetCommandStatus()
+	if _, ok := err1.(*StatusError); ok {
+		*err = err1
+		c.InterfaceReset() // best effort
+		return
+	}
+	*err = &Error{op, *err}
+}
+
+const (
+	ctrlInterfaceReset    uint8 = 0x41
+	ctrlGetCmommandStatus uint8 = 0x42
+)
+
+func (c *Conn) InterfaceReset() (err error) {
+	_, err = c.dev.Control(
+		usb.ControlVendor|usb.ControlInterface,
+		ctrlInterfaceReset, 0, uint16(c.iid), nil,
+	)
+	wrapErr("InterfaceReset", &err)
+	return
+}
+
+func (c *Conn) GetCommandStatus() (token uint32, done bool, err error) {
+	buf := c.cmdBuf[16:32]
+	_, err = c.dev.Control(
+		usb.ControlVendor|usb.ControlInterface|usb.ControlIn,
+		ctrlGetCmommandStatus, 0, uint16(c.iid), buf,
+	)
+	if err != nil {
+		wrapErr("GetCommandStatus", &err)
+		return
+	}
+	le := binary.LittleEndian
+	token = le.Uint32(buf[0:])
+	statusId := le.Uint32(buf[4:])
+	cmdId := buf[8]
+	done = buf[9] == 0
+	if statusId != 0 {
+		cmd := "unknown"
+		if cmdExclusiveAccess <= cmdId && cmdId <= cmdOTPWrite {
+			cmd = cmdStr[cmdId]
+		}
+		status := "unknown"
+		if 1 <= statusId && statusId <= 17 {
+			status = statusStr[statusId]
+		}
+		err = &StatusError{cmd, status}
 	}
 	return
 }

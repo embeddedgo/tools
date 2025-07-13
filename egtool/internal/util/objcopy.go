@@ -167,6 +167,9 @@ func (ss Sections) Size() int64 {
 
 // PadBytes returns the slice containing n bytes equal to b.
 func PadBytes(cache *[]byte, n int, b byte) []byte {
+	if cache == nil {
+		cache = &[]byte{}
+	}
 	if len(*cache) < n {
 		*cache = make([]byte, n)
 		for i := range *cache {
