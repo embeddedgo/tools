@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -56,4 +57,28 @@ func InOutFiles(inName, inSuffix, outName, outSuffix string) (string, string) {
 		outName = strings.TrimSuffix(inName, inSuffix) + outSuffix
 	}
 	return inName, outName
+}
+
+var pbuf = make([]byte, 80)
+
+const (
+	ptodo = "                         ] "
+	pdone = " [========================="
+)
+
+func Progress(pre string, cur, max, scale int, post string) {
+	pbuf = pbuf[:0]
+	pbuf = append(pbuf, '\r')
+	pbuf = append(pbuf, pre...)
+	done := 25 * cur / max
+	pbuf = append(pbuf, pdone[:done+2]...)
+	pbuf = append(pbuf, ptodo[done:]...)
+	pbuf = strconv.AppendInt(pbuf, int64(cur/scale), 10)
+	pbuf = append(pbuf, ' ')
+	pbuf = append(pbuf, post...)
+	if cur == max {
+		pbuf = append(pbuf, '\n')
+	}
+	os.Stderr.Write(pbuf)
+
 }

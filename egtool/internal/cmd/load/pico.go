@@ -7,7 +7,6 @@ package load
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"time"
 
 	"github.com/embeddedgo/tools/egtool/internal/picoboot"
@@ -75,6 +74,10 @@ func pico(elf string, quiet bool) {
 
 	util.FatalErr("", pb.ExitXIP()) // nop
 	for i := 0; i < imgSize; i += sectSize {
+		if !quiet {
+			util.Progress("Loading:", i, imgSize, 1024, "KiB")
+		}
+
 		err = pb.FlashErase(pb.WriteAddr(), sectSize)
 		util.FatalErr("", err)
 		util.FatalErr("", pb.ExitXIP()) // nop
@@ -83,12 +86,9 @@ func pico(elf string, quiet bool) {
 		util.FatalErr("", err)
 		util.FatalErr("", pb.ExitXIP()) // nop
 
-		if !quiet {
-			fmt.Print(".")
-		}
 	}
 	if !quiet {
-		fmt.Println()
+		util.Progress("Loaded: ", imgSize, imgSize, 1024, "KiB")
 	}
 
 	err = pb.Reboot2(picoboot.RebootNormal, time.Second/2, 0, 0)
