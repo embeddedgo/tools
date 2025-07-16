@@ -38,7 +38,7 @@ func Main(cmd string, args []string) {
 	}
 	elf := fs.Arg(0)
 	if elf == "" {
-		elf = util.DirName() + ".elf"
+		elf = util.Module() + ".elf"
 	}
 	if *target == "auto" {
 		*target = auto(elf)

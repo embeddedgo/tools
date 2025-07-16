@@ -5,9 +5,11 @@
 package util
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -37,21 +39,45 @@ func FatalErr(what string, err error) {
 
 // DirName returns the last element of the path to the current working
 // directory.
-func DirName() string {
-	dir, err := os.Getwd()
+//func DirName() string {
+//	dir, err := os.Getwd()
+//	FatalErr("", err)
+//	dir = filepath.Base(dir)
+//	if dir == "/" || dir == "." {
+//		dir = ""
+//	}
+//	return dir
+//}
+
+func Module() string {
+	out, err := exec.Command("go", "env", "GOMOD").Output()
 	FatalErr("", err)
-	dir = filepath.Base(dir)
-	if dir == "/" || dir == "." {
-		dir = ""
+	gomod := string(bytes.TrimSpace(out))
+	if gomod == "" || gomod == os.DevNull {
+		Fatal("go.mod file not found in current directory or any parent directory")
 	}
-	return dir
+	f, err := os.Open(gomod)
+	FatalErr("", err)
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		fs := bytes.Fields(sc.Bytes())
+		if len(fs) >= 2 && string(fs[0]) == "module" {
+			return string(fs[1])
+		}
+	}
+	if err := sc.Err(); err != nil {
+		FatalErr("", err)
+	}
+	Fatal("there is no module directive in " + gomod)
+	return ""
 }
 
 // InOutFiles infers the name of the input and output files from the name of the
 // current working directory if the inName is an empty strings.
 func InOutFiles(inName, inSuffix, outName, outSuffix string) (string, string) {
 	if inName == "" {
-		inName = DirName() + inSuffix
+		inName = Module() + inSuffix
 	}
 	if outName == "" {
 		outName = strings.TrimSuffix(inName, inSuffix) + outSuffix
@@ -71,7 +97,7 @@ func Progress(pre string, cur, max, scale int, post string) {
 	pbuf = append(pbuf, '\r')
 	pbuf = append(pbuf, pre...)
 	done := 25 * cur / max
-	pbuf = append(pbuf, pdone[:done+2]...)
+	pbuf = append(pbuf, pdone[:2+done]...)
 	pbuf = append(pbuf, ptodo[done:]...)
 	pbuf = strconv.AppendInt(pbuf, int64(cur/scale), 10)
 	pbuf = append(pbuf, ' ')
@@ -79,6 +105,6 @@ func Progress(pre string, cur, max, scale int, post string) {
 	if cur == max {
 		pbuf = append(pbuf, '\n')
 	}
-	os.Stderr.Write(pbuf)
+	os.Stdout.Write(pbuf)
 
 }

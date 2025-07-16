@@ -15,7 +15,7 @@ import (
 
 func pico(elf string, quiet bool) {
 	pb, err := picoboot.Connect("")
-	util.FatalErr("picoboot", err)
+	util.FatalErr("", err)
 	defer pb.Close()
 	err = pb.ExclusiveAccess(true)
 	util.FatalErr("", err)
