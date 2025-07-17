@@ -1,3 +1,5 @@
+# Deprecated. Use egtool instead.
+
 Emgo is a thin wrapper over go command. It has two main purposes:
 
 1. Makes it easier to use Embedded Go for embedded programming in presence of orignal Go used for system programming.
