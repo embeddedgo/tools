@@ -25,11 +25,12 @@ func Main(cmd string, args []string) {
 		fs.PrintDefaults()
 	}
 	target := fs.String(
-		"target", "auto",
-		"select the target device and transport:\n"+
-			"auto: try to determine the target device automatically\n"+
-			"pico: RP2350 (aka Raspberry Pi Pico 2) via USB PICOBOOT\n",
+		"target", "auto", "select the target device and transport:\n"+
+			"auto:   try to determine the target device automatically\n"+
+			"pico:   RP2350 (aka Raspberry Pi Pico 2) via USB PICOBOOT\n"+
+			"teensy: Teensy 4.x via USB\n",
 	)
+	busAddr := fs.String("usb", "", "select the USB device by `BUS:ADDR`")
 	quiet := fs.Bool("quiet", false, "do not print diagnostic information")
 	fs.Parse(args)
 	if fs.NArg() > 1 {
@@ -45,7 +46,9 @@ func Main(cmd string, args []string) {
 	}
 	switch *target {
 	case "pico":
-		pico(elf, *quiet)
+		pico(elf, *busAddr, *quiet)
+	case "teensy":
+		teensy(elf, *busAddr, *quiet)
 	default:
 		util.Fatal("unknown target: %s", *target)
 	}

@@ -13,8 +13,8 @@ import (
 	"github.com/embeddedgo/tools/egtool/internal/util"
 )
 
-func pico(elf string, quiet bool) {
-	pb, err := picoboot.Connect("")
+func pico(elf, busAddr string, quiet bool) {
+	pb, err := picoboot.Connect(busAddr)
 	util.FatalErr("", err)
 	defer pb.Close()
 	err = pb.ExclusiveAccess(true)
@@ -54,9 +54,12 @@ func pico(elf string, quiet bool) {
 	}
 
 	sections, err := util.ReadELF(elf)
+	util.FatalErr("", err)
 	img := bytes.NewBuffer(make([]byte, 0, sections.Size()*5/4))
 	const pad = 0xff
 	_, err = sections.Flatten(img, pad)
+	util.FatalErr("", err)
+
 	addr := uint32(sections[0].Paddr)
 	if addr != 0x1000_0000 {
 		// For now we don't support partial loadings.

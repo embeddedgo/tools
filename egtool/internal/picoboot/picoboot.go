@@ -7,12 +7,12 @@ package picoboot
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
-	"strconv"
-	"strings"
 	"time"
 	"unsafe"
 
+	"github.com/embeddedgo/tools/egtool/internal/util"
 	usb "github.com/google/gousb"
 )
 
@@ -46,22 +46,6 @@ type Conn struct {
 	writeSpec [2]uint32
 }
 
-func parseBusAddr(busAddr string) (int, int) {
-	s := strings.Split(busAddr, ":")
-	if len(s) != 2 {
-		return -1, -1
-	}
-	bus, err := strconv.ParseUint(s[0], 10, 8)
-	if err != nil {
-		return -1, -1
-	}
-	dev, err := strconv.ParseUint(s[1], 10, 8)
-	if err != nil {
-		return -1, -1
-	}
-	return int(bus), int(dev)
-}
-
 type Error struct {
 	Op  string
 	Err error
@@ -88,46 +72,39 @@ func wrapErr(op string, err *error) {
 // more than one such devices).
 func Connect(busAddr string) (conn *Conn, err error) {
 	defer wrapErr("Connect", &err)
-	bus, addr := parseBusAddr(busAddr)
-	if busAddr != "" && bus < 0 {
-		return nil, errors.New("bad USB device address: " + busAddr)
-	}
-	ctx := usb.NewContext()
-	var cn, in, an int
-	devs, err := ctx.OpenDevices(func(desc *usb.DeviceDesc) bool {
-		if bus >= 0 && (desc.Bus != bus || desc.Address != addr) {
-			return false
-		}
-		if desc.Vendor != 0x2e8a || desc.Product != 0x000f {
-			return false
-		}
-		for _, cfg := range desc.Configs {
-			for _, id := range cfg.Interfaces {
-				for _, is := range id.AltSettings {
-					if is.Class == 0xff && is.SubClass == 0 && is.Protocol == 0 {
-						cn, in, an = cfg.Number, id.Number, is.Alternate
-						return true
-					}
-				}
-			}
-		}
-		return false
-	})
+
+	ctx, devs, err := util.OpenUSB(0x2e8a, 0x000f, busAddr)
 	if err != nil {
-		return nil, err
+		return
 	}
-	defer func() {
-		if err != nil {
-			ctx.Close()
-		}
-	}()
+	defer ctx.Close()
 	if len(devs) == 0 {
 		return nil, errors.New("no USB devices in BOOTSEL mode were found")
 	}
 	if len(devs) != 1 {
 		return nil, errors.New("found more than one USB device in BOOTSEL mode")
 	}
+
 	dev := devs[0]
+	var cn, in, an int
+	ok := false
+	for _, cfg := range dev.Desc.Configs {
+		for _, id := range cfg.Interfaces {
+			for _, is := range id.AltSettings {
+				if is.Class == 0xff && is.SubClass == 0 && is.Protocol == 0 {
+					cn, in, an = cfg.Number, id.Number, is.Alternate
+					ok = true
+					break
+				}
+			}
+		}
+	}
+	if !ok {
+		return nil, fmt.Errorf(
+			"the found device %d:%d doesn't provide the expected interface",
+			dev.Desc.Bus, dev.Desc.Address,
+		)
+	}
 	dev.SetAutoDetach(true)
 
 	// Determine PICOBOOT bulk endpoints (TX/RX).

@@ -7,6 +7,7 @@ package load
 import (
 	"debug/elf"
 	"os"
+	"strings"
 
 	"github.com/embeddedgo/tools/egtool/internal/util"
 )
@@ -23,6 +24,9 @@ func auto(name string) string {
 	for _, s := range syms {
 		if s.Name == "picometa" {
 			return "pico"
+		}
+		if strings.HasPrefix(s.Name, "github.com/embeddedgo/imxrt/hal/") {
+			return "teensy"
 		}
 	}
 	return ""
