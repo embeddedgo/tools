@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func Warn(f string, args ...any) {
@@ -39,20 +41,20 @@ func FatalErr(what string, err error) {
 
 // DirName returns the last element of the path to the current working
 // directory.
-//func DirName() string {
-//	dir, err := os.Getwd()
-//	FatalErr("", err)
-//	dir = filepath.Base(dir)
-//	if dir == "/" || dir == "." {
-//		dir = ""
-//	}
-//	return dir
-//}
+func DirName() string {
+	dir, err := os.Getwd()
+	FatalErr("", err)
+	dir = filepath.Base(dir)
+	if dir == "/" || dir == "." {
+		dir = ""
+	}
+	return dir
+}
 
 func Module() string {
 	out, err := exec.Command("go", "env", "GOMOD").Output()
 	FatalErr("", err)
-	gomod := string(bytes.TrimSpace(out))
+	gomod := filepath.Clean(string(bytes.TrimRightFunc(out, unicode.IsSpace)))
 	if gomod == "" || gomod == os.DevNull {
 		Fatal("go.mod file not found in current directory or any parent directory")
 	}
@@ -77,7 +79,13 @@ func Module() string {
 // current working directory if the inName is an empty strings.
 func InOutFiles(inName, inSuffix, outName, outSuffix string) (string, string) {
 	if inName == "" {
-		inName = Module() + inSuffix
+		fs, err := os.Stat("go.mod")
+		if err != nil || !fs.Mode().IsRegular() {
+			inName = DirName()
+		} else {
+			inName = Module()
+		}
+		inName += inSuffix
 	}
 	if outName == "" {
 		outName = strings.TrimSuffix(inName, inSuffix) + outSuffix
@@ -105,6 +113,6 @@ func Progress(pre string, cur, max, scale int, post string) {
 	if cur == max {
 		pbuf = append(pbuf, '\n')
 	}
-	os.Stdout.Write(pbuf)
+	os.Stderr.Write(pbuf)
 
 }

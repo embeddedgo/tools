@@ -36,10 +36,7 @@ func Main(cmd string, args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	elf := fs.Arg(0)
-	if elf == "" {
-		elf = util.Module() + ".elf"
-	}
+	elf, _ := util.InOutFiles(fs.Arg(0), ".elf", "", "")
 	if *target == "auto" {
 		*target = auto(elf)
 		if *target == "" {
