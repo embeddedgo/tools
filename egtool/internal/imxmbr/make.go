@@ -10,8 +10,11 @@ import (
 )
 
 func Make(flashSize, imageSize int, flexRAMCfg uint32) []byte {
+	if flashSize < 0 || imageSize < 0 {
+		panic("flashSize<0 || imageSize<0")
+	}
 	const mbrSize = mbrEndAddr - baseAddr
-	if imageSize < 0 {
+	if imageSize == 0 {
 		imageSize = flashSize - mbrSize
 	}
 

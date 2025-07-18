@@ -12,6 +12,7 @@ import (
 
 	"github.com/embeddedgo/tools/egtool/internal/cmd/bin"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/hex"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/imxmbr"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/isrnames"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/load"
 )
@@ -24,6 +25,7 @@ type tool struct {
 var tools = map[string]tool{
 	"bin":      {bin.DescrBin, bin.Main},
 	"hex":      {hex.Descr, hex.Main},
+	"imxmbr":   {imxmbr.Descr, imxmbr.Main},
 	"isrnames": {isrnames.Descr, isrnames.Main},
 	"load":     {load.Descr, load.Main},
 	"uf2":      {bin.DescrUF2, bin.Main},

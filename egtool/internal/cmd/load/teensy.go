@@ -39,7 +39,7 @@ func teensy(elf, busAddr string, quiet bool) {
 		flashSize  = 16 * 1024 * 1024 // TODO: determine the actual size
 		flexRAMCfg = 0x5555_5556      // 480 KiB OCRAM, 32 KiB DTCM
 	)
-	mbr := imxmbr.Make(flashSize, -1, flexRAMCfg)
+	mbr := imxmbr.Make(flashSize, 0, flexRAMCfg)
 	sections = append(sections, &util.Section{Paddr: 0x6000_0000, Data: mbr})
 
 	img := bytes.NewBuffer(make([]byte, 0, sections.Size()*5/4))
