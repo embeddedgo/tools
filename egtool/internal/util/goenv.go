@@ -14,8 +14,8 @@ import (
 const goenvName = "go.env"
 
 // SetGOENV tries to find the go.env file and set GOENV to it.
-func SetGOENV() {
-	if os.Getenv("GOOS") == "noos" && os.Getenv("GOENV") != "" {
+func SetGOENV(always bool) {
+	if !always && os.Getenv("GOOS") == "noos" && os.Getenv("GOENV") != "" {
 		// GOENV is set by user manualy to be used together with GOOS=noos
 		return
 	}

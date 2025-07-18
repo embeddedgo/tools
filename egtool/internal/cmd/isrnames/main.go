@@ -52,7 +52,7 @@ func Main(cmd string, args []string) {
 	if *tags != "" {
 		cfg.BuildFlags = []string{"-tags", *tags}
 	}
-	util.SetGOENV()
+	util.SetGOENV(false)
 	pkgs, err := packages.Load(&cfg, "")
 	util.FatalErr("", err)
 

@@ -5,6 +5,7 @@
 package build
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -13,13 +14,25 @@ import (
 
 const Descr = "run `go build` with GOENV set to the found go.env file"
 
+const help = `
+This command looks for the go.env file up the current module directory tree and
+sets the GOENV enviroment variable to it. Next it runs the go build command with
+out any arguments. It is inteneded for simple use cases when you build the code
+in the current directory and all required build options are provided by the
+go.env file.
+`
+
 func Main(cmd string, args []string) {
-	util.SetGOENV()
+	if len(args) != 0 {
+		fmt.Fprintf(os.Stderr, help)
+		os.Exit(1)
+	}
+	util.SetGOENV(true)
 	goCmd, err := exec.LookPath("go")
 	util.FatalErr("", err)
 	c := &exec.Cmd{
 		Path:   goCmd,
-		Args:   append([]string{goCmd, cmd}, args...),
+		Args:   []string{goCmd, cmd},
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
