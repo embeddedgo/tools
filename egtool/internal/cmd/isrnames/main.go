@@ -42,6 +42,7 @@ func Main(cmd string, args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
+
 	handlers := make(map[string]int)
 	fset := token.NewFileSet()
 	cfg := packages.Config{
@@ -51,6 +52,7 @@ func Main(cmd string, args []string) {
 	if *tags != "" {
 		cfg.BuildFlags = []string{"-tags", *tags}
 	}
+	util.SetGOENV()
 	pkgs, err := packages.Load(&cfg, "")
 	util.FatalErr("", err)
 
