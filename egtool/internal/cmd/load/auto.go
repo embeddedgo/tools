@@ -28,6 +28,9 @@ func auto(name string) string {
 		if strings.HasPrefix(s.Name, "github.com/embeddedgo/imxrt/hal/") {
 			return "teensy"
 		}
+		if strings.HasPrefix(s.Name, "github.com/embeddedgo/stm32/hal/") {
+			return "stm32"
+		}
 	}
 	return ""
 }

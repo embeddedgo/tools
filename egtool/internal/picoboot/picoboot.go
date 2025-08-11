@@ -37,7 +37,7 @@ const (
 type Conn struct {
 	ctx       *usb.Context
 	dev       *usb.Device
-	iid       int
+	iid       uint16
 	oe        *usb.OutEndpoint
 	ie        *usb.InEndpoint
 	cmdBuf    [32]byte
@@ -141,7 +141,7 @@ func Connect(busAddr string) (conn *Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
-	conn = &Conn{ctx: ctx, dev: dev, iid: in, oe: oe, ie: ie}
+	conn = &Conn{ctx: ctx, dev: dev, iid: uint16(in), oe: oe, ie: ie}
 	binary.LittleEndian.AppendUint32(conn.cmdBuf[:0], magic)
 	return
 }
@@ -417,7 +417,7 @@ const (
 func (c *Conn) InterfaceReset() (err error) {
 	_, err = c.dev.Control(
 		usb.ControlVendor|usb.ControlInterface,
-		ctrlInterfaceReset, 0, uint16(c.iid), nil,
+		ctrlInterfaceReset, 0, c.iid, nil,
 	)
 	wrapErr("InterfaceReset", &err)
 	return
@@ -427,7 +427,7 @@ func (c *Conn) GetCommandStatus() (token uint32, done bool, err error) {
 	buf := c.cmdBuf[16:32]
 	_, err = c.dev.Control(
 		usb.ControlVendor|usb.ControlInterface|usb.ControlIn,
-		ctrlGetCmommandStatus, 0, uint16(c.iid), buf,
+		ctrlGetCmommandStatus, 0, c.iid, buf,
 	)
 	if err != nil {
 		wrapErr("GetCommandStatus", &err)
