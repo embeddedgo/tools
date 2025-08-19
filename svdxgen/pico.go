@@ -19,6 +19,8 @@ func picotweaks(gs []*Group) {
 				picoclocks(p)
 			case "dma":
 				picodma(p)
+			case "i2c":
+				picoi2c(p)
 			case "iobank":
 				picoiobank(p)
 			case "padsbank":
@@ -76,6 +78,64 @@ func picocommon(p *Periph) {
 			bf.Name = strings.ToUpper(bf.Name)
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
+			}
+		}
+	}
+}
+
+func picoi2c(p *Periph) {
+	for _, inst := range p.Insts {
+		if i := strings.Index(inst.Descr, " List of"); i > 0 {
+			inst.Descr = inst.Descr[:i]
+		}
+	}
+	for _, r := range p.Regs {
+		r.Name = strings.TrimPrefix(r.Name, "IC_")
+		for _, bf := range r.Bits {
+			bf.Name = strings.TrimPrefix(bf.Name, "IC_")
+			if len(bf.Values) == 2 && bf.Values[0].Value == 0 && bf.Values[1].Value == 1 {
+				bf.Values = nil
+			}
+			for _, v := range bf.Values {
+				v.Name = strings.TrimPrefix(v.Name, "IC_")
+			}
+		}
+		switch r.Name {
+		case "CON":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "10BITADDR_SLAVE", "10BITADDR_MASTER":
+					mode := bf.Name[10:]
+					bf.Name = mode + "_10BITADDR"
+					bf.Values = nil
+				case "MASTER_MODE", "RESTART_EN", "SLAVE_DISABLE", "STOP_DET_IFADDRESSED", "TX_EMPTY_CTRL", "RX_FIFO_FULL_HLD_CTRL":
+					bf.Values = nil
+				}
+			}
+		case "TAR":
+			for _, bf := range r.Bits {
+				if bf.Name == "TAR" {
+					bf.Name = "ADDR"
+				}
+			}
+		case "ENABLE":
+			for _, bf := range r.Bits {
+				if bf.Name == "ENABLE" {
+					bf.Name = "EN"
+				}
+			}
+		case "STATUS":
+			for _, bf := range r.Bits {
+				switch bf.Name {
+				case "ACTIVITY", "MST_ACTIVITY", "SLV_ACTIVITY":
+					bf.Name = bf.Name[:len(bf.Name)-5]
+				}
+			}
+		case "ENABLE_STATUS":
+			for _, bf := range r.Bits {
+				if bf.Name == "EN" {
+					bf.Name = "ENABLED"
+				}
 			}
 		}
 	}
