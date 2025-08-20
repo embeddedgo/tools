@@ -155,6 +155,7 @@ package {{.Pkg}}
 
 import (
 	"embedded/mmio"
+	"structs"
 	"unsafe"
 
 	{{range .Import -}}
@@ -165,6 +166,8 @@ import (
 {{$p := .Periph}}
 
 type {{$p}} struct {
+	_ structs.HostLayout
+
 	{{range .Regs -}}
 		{{if .Name -}}
 			{{- if .SubRegs -}}
@@ -199,6 +202,8 @@ func (p *{{$p}}) BaseAddr() uintptr {
 	{{$bs := .BitSiz}}
 	{{if .SubRegs -}}
 		type S{{.Type}} struct {
+			_ structs.HostLayout
+
 		{{range .SubRegs -}}
 			{{if .Name -}}
 				{{.Name}} mmio.R{{$bs}}[{{.Type}}]
@@ -247,6 +252,7 @@ package {{.Pkg}}
 
 import (
 	"embedded/mmio"
+	"structs"
 	"unsafe"
 
 	{{range .Import -}}
@@ -257,6 +263,8 @@ import (
 {{$p := .Periph}}
 
 type {{$p}} struct {
+	_ structs.HostLayout
+
 	{{range .Regs -}}
 		{{if .Name -}}
 			{{.Name}} {{if .Len}}[{{.Len}}]{{end}}R{{.Type}}
@@ -287,6 +295,8 @@ func (p *{{$p}}) BaseAddr() uintptr {
 
 	{{if $subr -}}
 		type R{{$rr}} struct {
+			_ structs.HostLayout
+
 		{{range $subr -}}
 			{{if .Name -}}
 				{{.Name}} R{{.Type}}
