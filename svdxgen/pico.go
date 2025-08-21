@@ -89,15 +89,19 @@ func picoi2c(p *Periph) {
 			inst.Descr = inst.Descr[:i]
 		}
 	}
+	var intrstat *Reg
 	for _, r := range p.Regs {
 		r.Name = strings.TrimPrefix(r.Name, "IC_")
+		r.Descr = strings.ReplaceAll(r.Descr, "IC_", "")
 		for _, bf := range r.Bits {
 			bf.Name = strings.TrimPrefix(bf.Name, "IC_")
+			bf.Descr = strings.ReplaceAll(bf.Descr, "IC_", "")
 			if len(bf.Values) == 2 && bf.Values[0].Value == 0 && bf.Values[1].Value == 1 {
 				bf.Values = nil
 			}
 			for _, v := range bf.Values {
 				v.Name = strings.TrimPrefix(v.Name, "IC_")
+				v.Descr = strings.ReplaceAll(v.Descr, "IC_", "")
 			}
 		}
 		switch r.Name {
@@ -112,6 +116,16 @@ func picoi2c(p *Periph) {
 					bf.Values = nil
 				}
 			}
+		case "INTR_STAT":
+			r.Type = "INTR"
+			intrstat = r
+		case "INTR_MASK":
+			r.Type = "INTR"
+			r.Bits = nil
+		case "RAW_INTR_STAT":
+			r.Type = "INTR"
+			intrstat.Bits = r.Bits
+			r.Bits = nil
 		case "TAR":
 			for _, bf := range r.Bits {
 				if bf.Name == "TAR" {
