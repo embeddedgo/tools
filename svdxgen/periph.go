@@ -125,9 +125,12 @@ func (p *Periph) Save(ctx *ctx) {
 			name += "(" + r.Type + ")"
 		}
 		if len(r.SubRegs) > 0 {
-			subregs := r.SubRegs[0].Name
-			for _, sr := range r.SubRegs[1:] {
-				subregs += "," + sr.Name
+			var subregs string
+			for _, sr := range r.SubRegs {
+				if subregs != "" {
+					subregs += ","
+				}
+				subregs += sr.Name
 				if sr.Type != "" {
 					subregs += "(" + sr.Type + ")"
 				}

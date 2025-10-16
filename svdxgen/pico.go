@@ -43,6 +43,8 @@ func picotweaks(gs []*Group) {
 				picouart(p)
 			case "xosc":
 				picoxosc(p)
+			case "pio":
+				picopio(p)
 			case "otpdata", "otpdataraw", "padsqspi", "usbdpram":
 				p.Insts = nil
 			}
@@ -79,6 +81,120 @@ func picocommon(p *Periph) {
 			for _, v := range bf.Values {
 				v.Name = strings.ToUpper(v.Name)
 			}
+		}
+	}
+}
+
+func picopio(p *Periph) {
+	var (
+		txf, rxf, instrmem *Reg
+		sm, putget, irq    Reg
+	)
+	for i, r := range p.Regs {
+		switch {
+		case len(r.Name) == 4 && strings.HasPrefix(r.Name, "TXF"):
+			if r.Name == "TXF0" {
+				r.Name = "TXF"
+				r.Len = 1
+				txf = r
+			} else {
+				txf.Len++
+				p.Regs[i] = nil
+			}
+		case len(r.Name) == 4 && strings.HasPrefix(r.Name, "RXF"):
+			if r.Name == "RXF0" {
+				r.Name = "RXF"
+				r.Len = 1
+				rxf = r
+			} else {
+				rxf.Len++
+				p.Regs[i] = nil
+			}
+		case strings.HasPrefix(r.Name, "INSTR_MEM"):
+			if r.Name == "INSTR_MEM0" {
+				r.Name = "INSTR_MEM"
+				r.Len = 1
+				instrmem = r
+			} else {
+				instrmem.Len++
+				p.Regs[i] = nil
+			}
+		case strings.HasPrefix(r.Name, "SM"):
+			if strings.HasPrefix(r.Name, "SM0_") {
+				if r.Name == "SM0_CLKDIV" {
+					sm = *r
+					sm.Name = "SM"
+					sm.Descr = "State machine configuration registers."
+					sm.Len = 1
+					p.Regs[i] = &sm
+					r.Type = "uint32"
+				} else {
+					p.Regs[i] = nil
+				}
+				r.Name = r.Name[4:]
+				if r.Name == "EXECCTRL" {
+					for _, bf := range r.Bits {
+						if bf.Name == "STATUS_N" {
+							for _, v := range bf.Values {
+								if v.Name == "IRQ" {
+									v.Name = "IRQ_THISPIO"
+								}
+							}
+						}
+					}
+				}
+				sm.SubRegs = append(sm.SubRegs, r)
+			} else {
+				if strings.HasSuffix(r.Name, "_CLKDIV") {
+					sm.Len++
+				}
+				p.Regs[i] = nil
+			}
+		case len(r.Name) == 12 && strings.HasPrefix(r.Name, "RXF"):
+			if strings.HasPrefix(r.Name, "RXF0_") {
+				if r.Name == "RXF0_PUTGET0" {
+					putget = *r
+					putget.Name = "RXF_PUTGET"
+					putget.Descr = "Direct read/write access to first four entries of the RX FIFOs."
+					putget.Len = 1
+					p.Regs[i] = &putget
+					putget.SubRegs = []*Reg{r}
+					r.Name = "E"
+					r.Len = 4
+				} else {
+					p.Regs[i] = nil
+				}
+				//r.Name = "E" + r.Name[len(r.Name)-1:]
+				//tget.SubRegs = append(putget.SubRegs, r)
+			} else {
+				if strings.HasSuffix(r.Name, "_PUTGET0") {
+					putget.Len++
+				}
+				p.Regs[i] = nil
+			}
+		case strings.HasPrefix(r.Name, "IRQ"):
+			if strings.HasPrefix(r.Name, "IRQ0_") {
+				if r.Name == "IRQ0_INTE" {
+					irq = *r
+					irq.Name = "IRQ"
+					irq.Descr = "Interrupt Enable / Force / Status after masking."
+					irq.Len = 1
+					p.Regs[i] = &irq
+				} else {
+					p.Regs[i] = nil
+				}
+				r.Name = r.Name[len(r.Name)-1:]
+				r.Type = "INTR"
+				r.Bits = nil
+				irq.SubRegs = append(irq.SubRegs, r)
+			} else {
+				if strings.HasSuffix(r.Name, "_INTE") {
+					irq.Len++
+				}
+				p.Regs[i] = nil
+			}
+		case r.Name == "GPIOBASE":
+			r.Bits = nil
 		}
 	}
 }
