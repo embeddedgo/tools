@@ -206,7 +206,7 @@ func (p *{{$p}}) BaseAddr() uintptr {
 
 		{{range .SubRegs -}}
 			{{if .Name -}}
-				{{.Name}} mmio.R{{$bs}}[{{.Type}}]
+				{{.Name}} {{if .Len}}[{{.Len}}]{{end}}mmio.R{{$bs}}[{{.Type}}]
 			{{- else -}}
 				_ {{if .Len}}[{{.Len}}]{{end}}uint{{$bs}}
 			{{- end}}
@@ -299,7 +299,7 @@ func (p *{{$p}}) BaseAddr() uintptr {
 
 		{{range $subr -}}
 			{{if .Name -}}
-				{{.Name}} R{{.Type}}
+				{{.Name}} {{if .Len}}[{{.Len}}]{{end}}R{{.Type}}
 			{{- else -}}
 				_ {{if .Len}}[{{.Len}}]{{end}}uint{{.BitSiz}}
 			{{- end}}
