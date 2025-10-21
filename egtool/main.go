@@ -16,6 +16,7 @@ import (
 	"github.com/embeddedgo/tools/egtool/internal/cmd/imxmbr"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/isrnames"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/load"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/pioasm"
 )
 
 type tool struct {
@@ -30,6 +31,7 @@ var tools = map[string]tool{
 	"imxmbr":   {imxmbr.Descr, imxmbr.Main},
 	"isrnames": {isrnames.Descr, isrnames.Main},
 	"load":     {load.Descr, load.Main},
+	"pioasm":   {pioasm.Descr, pioasm.Main},
 	"uf2":      {bin.DescrUF2, bin.Main},
 }
 
