@@ -114,7 +114,6 @@ struct egtool_output : public output_format {
 			}
 			uint8_t ec0 = uint8_t(r32), ec1 = uint8_t(r32>>8), ec2 = uint8_t(r32>>16), ec3 = uint8_t(r32>>24);
 
-			std::string shfitCtrl = "";
 			r32 = 0;
 			r32 |= uint32_t(program.out.threshold & 31) << 25;
 			r32 |= uint32_t(program.in.threshold & 31) << 20;
@@ -123,27 +122,7 @@ struct egtool_output : public output_format {
 			r32 |= uint32_t(program.out.autop) << 17;
 			r32 |= uint32_t(program.in.autop) << 16;
 			r32 |=  uint32_t(program.in.pin_count & 31);
-			shfitCtrl += "out=./";
-			if (program.out.right) {
-				shfitCtrl += "right/";
-			} else {
-				shfitCtrl += "left/";
-			}
-			shfitCtrl += std::to_string(program.out.threshold);
-			if (program.out.autop) {
-				shfitCtrl += "/auto";
-			}
-			shfitCtrl += " in=" + std::to_string(program.in.pin_count);
-			if (program.in.right) {
-				shfitCtrl += "/right/";
-			} else {
-				shfitCtrl += "/left/";
-			}
-			shfitCtrl += std::to_string(program.in.threshold);
-			if (program.in.autop) {
-				shfitCtrl += "/auto";
-			}
-			shfitCtrl += " fifo=";
+			std::string shfitCtrl = "fifo=";
 			switch (program.fifo) {
 			case fifo_config::rx:
 				r32 |= 1<<31;
@@ -168,6 +147,30 @@ struct egtool_output : public output_format {
 			default:
 				shfitCtrl += "txrx";
 			}
+			if (program.out.pin_count >= 0) {
+				shfitCtrl += " out=,";
+				if (program.out.right) {
+					shfitCtrl += "right,";
+				} else {
+					shfitCtrl += "left,";
+				}
+				shfitCtrl += std::to_string(program.out.threshold);
+				if (program.out.autop) {
+					shfitCtrl += ",auto";
+				}
+			}
+			if (program.in.pin_count >= 0) {
+				shfitCtrl += " in=" + std::to_string(program.in.pin_count);
+				if (program.in.right) {
+					shfitCtrl += ",right,";
+				} else {
+					shfitCtrl += ",left,";
+				}
+				shfitCtrl += std::to_string(program.in.threshold);
+				if (program.in.autop) {
+					shfitCtrl += ",auto";
+				}
+			}
 			uint8_t sc0 = uint8_t(r32), sc1 = uint8_t(r32>>8), sc2 = uint8_t(r32>>16), sc3 = uint8_t(r32>>24);
 
 			std::string pinCtrl = "";
@@ -181,7 +184,7 @@ struct egtool_output : public output_format {
 				pinCtrl += " set=" + std::to_string(program.set_count);
 			}
 			r32 |= uint32_t(program.out.pin_count & 63) << 20;
-			if ((r32>>20 & 63) != 63) {
+			if (program.out.pin_count >= 0) {
 				pinCtrl += " out=" + std::to_string(program.out.pin_count);
 			}
 			uint8_t pc2 = uint8_t(r32>>16), pc3 = uint8_t(r32>>24);
