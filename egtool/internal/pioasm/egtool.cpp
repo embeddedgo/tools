@@ -121,7 +121,7 @@ struct egtool_output : public output_format {
 			r32 |= uint32_t(program.in.right) << 18;
 			r32 |= uint32_t(program.out.autop) << 17;
 			r32 |= uint32_t(program.in.autop) << 16;
-			r32 |=  uint32_t(program.in.pin_count & 31);
+			r32 |= uint32_t(program.in.pin_count & 63);
 			std::string shfitCtrl = "fifo=";
 			switch (program.fifo) {
 			case fifo_config::rx:
