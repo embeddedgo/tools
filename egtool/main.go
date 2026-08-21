@@ -12,6 +12,7 @@ import (
 
 	"github.com/embeddedgo/tools/egtool/internal/cmd/bin"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/build"
+	"github.com/embeddedgo/tools/egtool/internal/cmd/exec"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/hex"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/imxmbr"
 	"github.com/embeddedgo/tools/egtool/internal/cmd/isrnames"
@@ -32,6 +33,7 @@ var tools = map[string]tool{
 	"isrnames": {isrnames.Descr, isrnames.Main},
 	"load":     {load.Descr, load.Main},
 	"pioasm":   {pioasm.Descr, pioasm.Main},
+	"exec":     {exec.Descr, exec.Main},
 	"uf2":      {bin.DescrUF2, bin.Main},
 }
 
