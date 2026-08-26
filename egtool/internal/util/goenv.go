@@ -14,10 +14,10 @@ import (
 const goenvName = "go.env"
 
 // SetGOENV tries to find the go.env file and set GOENV to it.
-func SetGOENV(always bool) {
-	if !always && os.Getenv("GOOS") == "noos" && os.Getenv("GOENV") != "" {
-		// GOENV is set by user manualy to be used together with GOOS=noos
-		return
+func SetGOENV(always bool) string {
+	if !always && os.Getenv("GOENV") != "" {
+		// GOENV is set by user manualy
+		return ""
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -38,15 +38,16 @@ func SetGOENV(always bool) {
 		}
 		_, err = os.Stat(filepath.Join(wd, "go.mod"))
 		if err == nil {
-			return // found go.mod but no goenvName, stop here
+			return "" // found go.mod but no goenvName, stop here
 		}
 		if !errors.Is(err, fs.ErrNotExist) {
 			FatalErr("", err)
 		}
 		wd = filepath.Dir(wd)
 		if wd == "/" || wd == "." { // FIXME: windows?
-			return
+			return ""
 		}
 	}
 	FatalErr("", os.Setenv("GOENV", goenvPath))
+	return goenvPath
 }

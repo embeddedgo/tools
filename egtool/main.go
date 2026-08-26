@@ -27,13 +27,15 @@ type tool struct {
 
 var tools = map[string]tool{
 	"bin":      {bin.DescrBin, bin.Main},
-	"build":    {build.Descr, build.Main},
+	"build":    {build.DescrBuild, build.Main},
 	"hex":      {hex.Descr, hex.Main},
 	"imxmbr":   {imxmbr.Descr, imxmbr.Main},
 	"isrnames": {isrnames.Descr, isrnames.Main},
 	"load":     {load.Descr, load.Main},
 	"pioasm":   {pioasm.Descr, pioasm.Main},
 	"exec":     {exec.Descr, exec.Main},
+	"run":      {build.DescrRun, build.Main},
+	"test":     {build.DescrTest, build.Main},
 	"uf2":      {bin.DescrUF2, bin.Main},
 }
 
