@@ -53,7 +53,7 @@ func Main(cmd string, args []string) {
 				*arch = "riscv64"
 			}
 		default:
-			util.Fatal("unknown ELF architecture code: %#x or entry address: %#x")
+			util.Fatal("unknown ELF architecture code: %#x or entry address: %#x", h.Machine, h.Entry)
 		}
 	}
 	switch *arch {
@@ -87,6 +87,7 @@ func Main(cmd string, args []string) {
 	//fmt.Println(execArgs)
 	path, err := exec.LookPath(execArgs[0])
 	util.FatalErr(execArgs[0], err)
+	handleSIGQUIT()
 	execCmd := exec.Cmd{
 		Path:   path,
 		Args:   execArgs,
