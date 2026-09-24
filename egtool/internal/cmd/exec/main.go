@@ -87,6 +87,7 @@ func Main(cmd string, args []string) {
 	//fmt.Println(execArgs)
 	path, err := exec.LookPath(execArgs[0])
 	util.FatalErr(execArgs[0], err)
+	handleSIGQUIT()
 	execCmd := exec.Cmd{
 		Path:   path,
 		Args:   execArgs,
